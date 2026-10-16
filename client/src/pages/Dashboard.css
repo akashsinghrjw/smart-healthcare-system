@@ -1,0 +1,130 @@
+.dashboard-page {
+  min-height: calc(100vh - 72px);
+  padding: 40px 7%;
+  box-sizing: border-box;
+  background: #f5f9fc;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  color: #12343b;
+  font-size: 30px;
+}
+
+.dashboard-header p {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.dashboard-icon {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e3f5f1;
+  color: #159a87;
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.dashboard-intro {
+  background: #ffffff;
+  border: 1px solid #e7edf1;
+  border-radius: 15px;
+  padding: 25px;
+  margin-bottom: 25px;
+}
+
+.dashboard-intro h2 {
+  margin: 0 0 8px;
+  color: #12343b;
+  font-size: 21px;
+}
+
+.dashboard-intro p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.dashboard-card {
+  background: #ffffff;
+  border: 1px solid #e7edf1;
+  border-radius: 15px;
+  padding: 24px;
+  text-decoration: none;
+  transition: 0.2s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+}
+
+.card-icon {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f7f4;
+  color: #159a87;
+  border-radius: 11px;
+  font-size: 20px;
+  margin-bottom: 17px;
+}
+
+.dashboard-card h3 {
+  margin: 0 0 8px;
+  color: #12343b;
+  font-size: 17px;
+}
+
+.dashboard-card p {
+  margin: 0 0 17px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dashboard-card span {
+  color: #159a87;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-page {
+    padding: 25px 5%;
+  }
+
+  .dashboard-header h1 {
+    font-size: 25px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}

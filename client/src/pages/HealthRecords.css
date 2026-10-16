@@ -1,0 +1,132 @@
+.health-records-page {
+  min-height: calc(100vh - 72px);
+  padding: 40px 7%;
+  box-sizing: border-box;
+  background: #f5f9fc;
+}
+
+.health-records-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.records-header-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e3f5f1;
+  color: #159a87;
+  font-size: 23px;
+}
+
+.health-records-header h1 {
+  margin: 0;
+  color: #12343b;
+  font-size: 30px;
+}
+
+.health-records-header p {
+  margin: 7px 0 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.records-info {
+  background: #ffffff;
+  border: 1px solid #e7edf1;
+  border-radius: 15px;
+  padding: 24px;
+  margin-bottom: 25px;
+}
+
+.records-info h2 {
+  margin: 0 0 8px;
+  color: #12343b;
+  font-size: 21px;
+}
+
+.records-info p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.records-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.record-card {
+  background: #ffffff;
+  border: 1px solid #e7edf1;
+  border-radius: 15px;
+  padding: 25px;
+  transition: 0.2s ease;
+}
+
+.record-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+}
+
+.record-icon {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8f7f4;
+  color: #159a87;
+  border-radius: 11px;
+  font-size: 20px;
+  margin-bottom: 17px;
+}
+
+.record-card h3 {
+  margin: 0 0 8px;
+  color: #12343b;
+  font-size: 17px;
+}
+
+.record-card p {
+  margin: 0 0 18px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.record-card button {
+  border: none;
+  background: #159a87;
+  color: #ffffff;
+  padding: 10px 17px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.record-card button:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 650px) {
+  .health-records-page {
+    padding: 25px 5%;
+  }
+
+  .health-records-header h1 {
+    font-size: 25px;
+  }
+
+  .records-grid {
+    grid-template-columns: 1fr;
+  }
+}
