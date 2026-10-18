@@ -216,7 +216,7 @@ export default function AuthModal({
               marginTop: "8px"
             }}
           >
-            {loading ? "Connecting to Live Database..." : isLogin ? "Sign In" : "Register Account"}
+            {loading ? (isLogin ? "Signing In..." : "Creating Account...") : isLogin ? "Sign In" : "Register Account"}
           </button>
         </form>
 
