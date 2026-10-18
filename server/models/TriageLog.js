@@ -1,15 +1,17 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
-const triageSchema = new mongoose.Schema(
+const TriageLogSchema = new mongoose.Schema(
   {
-    patientName: { type: String, required: true },
-    patientEmail: { type: String, required: true, lowercase: true },
+    patientEmail: { type: String, default: '' },
+    patientName: { type: String, default: 'Anonymous' },
     query: { type: String, required: true },
-    condition: { type: String, required: true },
-    date: { type: String, default: () => new Date().toLocaleDateString() },
-    time: { type: String, default: () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }
+    condition: { type: String, default: '' },
+    guidance: { type: String, required: true },
+    source: { type: String, default: 'Gemini AI via Backend' },
+    date: { type: String, default: () => new Date().toISOString().split('T')[0] },
+    time: { type: String, default: () => new Date().toLocaleTimeString() }
   },
   { timestamps: true }
 );
 
-export default mongoose.model("TriageLog", triageSchema);
+module.exports = mongoose.model('TriageLog', TriageLogSchema);

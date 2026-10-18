@@ -1,16 +1,17 @@
-import mongoose from "mongoose";
+const mongoose = require('mongoose');
 
-const recordSchema = new mongoose.Schema(
+const MedicalRecordSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    type: { type: String, default: "Diagnostic Lab Report" },
-    patientName: { type: String, required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     patientEmail: { type: String, required: true, lowercase: true },
-    date: { type: String, default: () => new Date().toISOString().split("T")[0] },
-    fileData: { type: String, default: "" },
-    fileName: { type: String, default: "Document File" }
+    patientName: { type: String, default: '' },
+    title: { type: String, required: true },
+    type: { type: String, default: 'Diagnostic Lab Report' },
+    date: { type: String, default: () => new Date().toISOString().split('T')[0] },
+    fileName: { type: String, default: '' },
+    fileData: { type: String, default: '' } // Base64 document data
   },
   { timestamps: true }
 );
 
-export default mongoose.model("MedicalRecord", recordSchema);
+module.exports = mongoose.model('MedicalRecord', MedicalRecordSchema);

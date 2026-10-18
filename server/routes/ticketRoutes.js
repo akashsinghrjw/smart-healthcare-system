@@ -1,28 +1,60 @@
 const express = require('express');
 const router = express.Router();
 const Ticket = require('../models/Ticket');
-const { protect } = require('../middleware/authMiddleware');
 
-// Get all tickets/appointments for user
-router.get('/', protect, async (req, res) => {
+// Submit ticket
+router.post('/', async (req, res) => {
   try {
-    const tickets = await Ticket.find({ user: req.user._id });
-    res.json(tickets);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const { name, email, msg } = req.body;
+    if (!name || !email || !msg) {
+      return res.status(400).json({ message: 'Name, email, and message are required' });
+    }
+
+    const ticketId = 'TKT-' + Math.floor(100000 + Math.random() * 900000);
+
+    const ticket = await Ticket.create({
+      ticketId,
+      name,
+      email,
+      msg,
+      status: 'PENDING'
+    });
+
+    res.status(201).json(ticket);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
-// Create new ticket/appointment
-router.post('/', protect, async (req, res) => {
+// Track ticket by ID
+router.get('/:ticketId', async (req, res) => {
   try {
-    const ticket = await Ticket.create({
-      ...req.body,
-      user: req.user._id,
-    });
-    res.status(201).json(ticket);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const ticket = await Ticket.findOne({ ticketId: req.params.ticketId });
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    res.json(ticket);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Admin reply / resolve ticket
+router.patch('/:id/reply', async (req, res) => {
+  try {
+    const { adminReply } = req.body;
+    const ticket = await Ticket.findByIdAndUpdate(
+      req.params.id,
+      {
+        adminReply,
+        status: 'RESOLVED',
+        resolvedAt: new Date().toLocaleString()
+      },
+      { new: true }
+    );
+    res.json(ticket);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
