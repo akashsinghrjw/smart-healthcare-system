@@ -1,149 +1,239 @@
-// src/components/AuthModal.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { api } from "../utils/api";
 import { FaTimes } from "react-icons/fa";
-import { safeLoad } from "../utils/storage";
 
 export default function AuthModal({
   showAuthModal,
   setShowAuthModal,
-  authMode,
+  authMode = "login",
   setAuthMode,
-  authRole,
-  setAuthRole,
+  authRole = "patient",
   onLoginSuccess
 }) {
-  const [authError, setAuthError] = useState("");
-  const [loginIdentifier, setLoginIdentifier] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [regName, setRegName] = useState("");
-  const [regEmail, setRegEmail] = useState("");
-  const [regPhone, setRegPhone] = useState("");
-  const [regPassword, setRegPassword] = useState("");
+  const [isLogin, setIsLogin] = useState(authMode === "login");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setIsLogin(authMode === "login");
+  }, [authMode]);
 
   if (!showAuthModal) return null;
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    setAuthError("");
-    if (!regName.trim() || !regEmail.trim() || !regPhone.trim() || !regPassword.trim()) {
-      setAuthError("Kripya saari details bharein!");
-      return;
-    }
-
-    const currentUsers = safeLoad("system_registered_users");
-    if (currentUsers.some((u) => (u?.email || "").toLowerCase() === regEmail.trim().toLowerCase())) {
-      setAuthError("Yeh Email pehle se registered hai!");
-      return;
-    }
-
-    const newUser = {
-      id: Date.now(),
-      name: regName.trim(),
-      email: regEmail.trim().toLowerCase(),
-      phone: regPhone.trim(),
-      password: regPassword,
-      registeredAt: new Date().toLocaleDateString()
-    };
-
-    const updated = [newUser, ...currentUsers];
-    localStorage.setItem("system_registered_users", JSON.stringify(updated));
-
-    localStorage.setItem("token", "token_" + newUser.id);
-    localStorage.setItem("userRole", "patient");
-    localStorage.setItem("userName", newUser.name);
-    localStorage.setItem("userEmail", newUser.email);
-    localStorage.setItem("userPhone", newUser.phone);
-
-    onLoginSuccess("patient", newUser.name, newUser.email, newUser.phone);
-    setShowAuthModal(false);
-    setRegName("");
-    setRegEmail("");
-    setRegPhone("");
-    setRegPassword("");
+  const handleClose = () => {
+    setError("");
+    if (setShowAuthModal) setShowAuthModal(false);
   };
 
-  const handleLogin = (e) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setAuthError("");
-    const iden = (loginIdentifier || "").trim().toLowerCase();
-    const pass = loginPassword;
+    setLoading(true);
+    setError("");
 
-    if (authRole === "admin") {
-      if ((iden === "admin@smarthealthcare.com" || iden === "admin") && pass === "admin123") {
-        localStorage.setItem("token", "admin_token");
-        localStorage.setItem("userRole", "admin");
-        localStorage.setItem("userName", "Hospital Chief Admin");
-        localStorage.setItem("userEmail", "admin@smarthealthcare.com");
-
-        onLoginSuccess("admin", "Hospital Chief Admin", "admin@smarthealthcare.com", "");
-        setShowAuthModal(false);
-        setLoginIdentifier("");
-        setLoginPassword("");
-        return;
+    try {
+      let res;
+      if (isLogin) {
+        // Backend API Login
+        res = await api.login({
+          email: formData.email.trim(),
+          password: formData.password
+        });
       } else {
-        setAuthError("Galat Admin Details! (Email: admin@smarthealthcare.com | Pass: admin123)");
-        return;
+        // Backend API Register
+        res = await api.register({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          phone: formData.phone.trim(),
+          role: authRole || "patient"
+        });
       }
-    }
 
-    const currentUsers = safeLoad("system_registered_users");
-    const user = currentUsers.find(
-      (u) => ((u?.email || "").toLowerCase() === iden || (u?.phone || "") === iden) && u?.password === pass
-    );
+      if (res && res.token) {
+        // Save token and session
+        localStorage.setItem("token", res.token);
+        localStorage.setItem("userRole", res.role || authRole || "patient");
+        localStorage.setItem("userName", res.name || formData.name || "Patient");
+        localStorage.setItem("userEmail", res.email || formData.email);
+        localStorage.setItem("userPhone", formData.phone || "");
 
-    if (user) {
-      localStorage.setItem("token", "token_" + user.id);
-      localStorage.setItem("userRole", "patient");
-      localStorage.setItem("userName", user.name || "Patient");
-      localStorage.setItem("userEmail", user.email || "");
-      localStorage.setItem("userPhone", user.phone || "");
+        if (onLoginSuccess) {
+          onLoginSuccess(
+            res.role || authRole || "patient",
+            res.name || formData.name || "Patient",
+            res.email || formData.email,
+            formData.phone || ""
+          );
+        }
 
-      onLoginSuccess("patient", user.name || "Patient", user.email || "", user.phone || "");
-      setShowAuthModal(false);
-      setLoginIdentifier("");
-      setLoginPassword("");
-    } else {
-      setAuthError("Galat Email/Contact ya Password!");
+        handleClose();
+      } else {
+        throw new Error("Authentication failed. Invalid response from server.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to connect to database");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999 }} onClick={() => setShowAuthModal(false)}>
-      <div style={{ background: "#ffffff", width: "90%", maxWidth: "420px", padding: "24px", borderRadius: "16px" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <h3 style={{ fontSize: "17px", margin: 0 }}>{authMode === "login" ? "Login Portal" : "Create Account"}</h3>
-          <button onClick={() => setShowAuthModal(false)} style={{ border: "none", background: "none", fontSize: "18px", cursor: "pointer" }}><FaTimes /></button>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(15, 23, 42, 0.75)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 999999,
+        padding: "20px"
+      }}
+      onClick={handleClose}
+    >
+      <div
+        style={{
+          background: "#ffffff",
+          borderRadius: "16px",
+          padding: "30px",
+          width: "100%",
+          maxWidth: "420px",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div>
+            <h2 style={{ margin: 0, color: "#0f172a", fontSize: "20px", fontWeight: "800" }}>
+              {isLogin ? "Welcome Back" : "Create Patient Account"}
+            </h2>
+            <small style={{ color: "#0d9488", fontWeight: "700", textTransform: "uppercase", fontSize: "11px" }}>
+              {authRole === "admin" ? "Hospital Admin Portal" : "Smart Healthcare Portal"}
+            </small>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "18px",
+              cursor: "pointer",
+              color: "#64748b"
+            }}
+          >
+            <FaTimes />
+          </button>
         </div>
 
-        <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-          <button type="button" style={{ flex: 1, padding: "8px", borderRadius: "6px", border: authRole === "patient" ? "1.5px solid #0d9488" : "1px solid #cbd5e1", background: authRole === "patient" ? "#e6f7f5" : "#ffffff", color: authRole === "patient" ? "#0d9488" : "#64748b", fontWeight: "700", cursor: "pointer" }} onClick={() => setAuthRole("patient")}>Patient</button>
-          <button type="button" style={{ flex: 1, padding: "8px", borderRadius: "6px", border: authRole === "admin" ? "1.5px solid #6366f1" : "1px solid #cbd5e1", background: authRole === "admin" ? "#e0e7ff" : "#ffffff", color: authRole === "admin" ? "#4338ca" : "#64748b", fontWeight: "700", cursor: "pointer" }} onClick={() => { setAuthRole("admin"); setAuthMode("login"); }}>Hospital Admin</button>
-        </div>
-
-        {authError && <div style={{ background: "#fee2e2", color: "#b91c1c", padding: "8px", borderRadius: "6px", fontSize: "12px", marginBottom: "10px" }}>{authError}</div>}
-
-        {authRole === "patient" && (
-          <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", marginBottom: "12px" }}>
-            <button type="button" style={{ flex: 1, padding: "6px", background: "none", border: "none", borderBottom: authMode === "login" ? "2px solid #0d9488" : "none", color: authMode === "login" ? "#0d9488" : "#64748b", fontWeight: "700", cursor: "pointer" }} onClick={() => { setAuthMode("login"); setAuthError(""); }}>Sign In</button>
-            <button type="button" style={{ flex: 1, padding: "6px", background: "none", border: "none", borderBottom: authMode === "register" ? "2px solid #0d9488" : "none", color: authMode === "register" ? "#0d9488" : "#64748b", fontWeight: "700", cursor: "pointer" }} onClick={() => { setAuthMode("register"); setAuthError(""); }}>Sign Up</button>
+        {error && (
+          <div style={{ background: "#fee2e2", color: "#b91c1c", padding: "10px 14px", borderRadius: "8px", fontSize: "13px", marginBottom: "16px" }}>
+            {error}
           </div>
         )}
 
-        {authRole === "patient" && authMode === "register" ? (
-          <form onSubmit={handleRegister}>
-            <input style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", marginBottom: "8px", boxSizing: "border-box" }} placeholder="Full Name" value={regName} onChange={(e) => setRegName(e.target.value)} required />
-            <input style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", marginBottom: "8px", boxSizing: "border-box" }} type="email" placeholder="Email Address" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} required />
-            <input style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", marginBottom: "8px", boxSizing: "border-box" }} type="tel" placeholder="Contact Number" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} required />
-            <input style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", marginBottom: "12px", boxSizing: "border-box" }} type="password" placeholder="Password" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} required />
-            <button type="submit" style={{ width: "100%", padding: "9px", border: "none", borderRadius: "6px", background: "#0d9488", color: "#ffffff", fontWeight: "600", cursor: "pointer" }}>Register</button>
-          </form>
-        ) : (
-          <form onSubmit={handleLogin}>
-            <input style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", marginBottom: "8px", boxSizing: "border-box" }} placeholder={authRole === "admin" ? "admin@smarthealthcare.com" : "Email or Phone"} value={loginIdentifier} onChange={(e) => setLoginIdentifier(e.target.value)} required />
-            <input style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", marginBottom: "12px", boxSizing: "border-box" }} type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required />
-            <button type="submit" style={{ width: "100%", padding: "9px", border: "none", borderRadius: "6px", background: "#0d9488", color: "#ffffff", fontWeight: "600", cursor: "pointer" }}>Sign In</button>
-          </form>
-        )}
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {!isLogin && (
+            <>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>Full Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Enter full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required={!isLogin}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>Phone Number</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="10-digit mobile number"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", boxSizing: "border-box" }}
+                />
+              </div>
+            </>
+          )}
+
+          <div>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>Email Address</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="example@mail.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Enter password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: "#0d9488",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "15px",
+              fontWeight: "600",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+              marginTop: "8px"
+            }}
+          >
+            {loading ? "Connecting to Live Database..." : isLogin ? "Sign In" : "Register Account"}
+          </button>
+        </form>
+
+        <div style={{ textAlign: "center", marginTop: "16px", fontSize: "13px", color: "#64748b" }}>
+          {isLogin ? "Don't have an account? " : "Already registered? "}
+          <button
+            type="button"
+            onClick={() => {
+              setIsLogin(!isLogin);
+              if (setAuthMode) setAuthMode(isLogin ? "register" : "login");
+              setError("");
+            }}
+            style={{ background: "none", border: "none", color: "#0d9488", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
+          >
+            {isLogin ? "Register Now" : "Login Here"}
+          </button>
+        </div>
       </div>
     </div>
   );

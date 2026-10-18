@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import { safeLoad } from "./utils/storage";
+import { api } from "./utils/api";
 import { FaTimes, FaFileMedicalAlt } from "react-icons/fa";
 
 export default function App() {
@@ -82,17 +83,36 @@ export default function App() {
     refreshState();
   };
 
-  const handleDeleteMyAccount = () => {
+  // Live MongoDB Account Deletion Handler
+  const handleDeleteMyAccount = async () => {
     if (window.confirm("Kya aap apna account delete karna chahte hain?")) {
-      const currentUsers = safeLoad("system_registered_users").filter((u) => (u?.email || "").toLowerCase() !== (userEmail || "").toLowerCase());
-      const r = safeLoad("real_records").filter((x) => (x?.patientEmail || "").toLowerCase() !== (userEmail || "").toLowerCase());
-      const m = safeLoad("real_medicines").filter((x) => (x?.patientEmail || "").toLowerCase() !== (userEmail || "").toLowerCase());
-      const t = safeLoad("real_triage_logs").filter((x) => (x?.patientEmail || "").toLowerCase() !== (userEmail || "").toLowerCase());
+      try {
+        // 1. Live Backend API Call to delete from MongoDB Atlas
+        await api.deleteAccount();
+      } catch (err) {
+        console.warn("MongoDB delete API note:", err.message);
+      }
+
+      // 2. Clear Local Storage Cache
+      const currentUsers = safeLoad("system_registered_users").filter(
+        (u) => (u?.email || "").toLowerCase() !== (userEmail || "").toLowerCase()
+      );
+      const r = safeLoad("real_records").filter(
+        (x) => (x?.patientEmail || "").toLowerCase() !== (userEmail || "").toLowerCase()
+      );
+      const m = safeLoad("real_medicines").filter(
+        (x) => (x?.patientEmail || "").toLowerCase() !== (userEmail || "").toLowerCase()
+      );
+      const t = safeLoad("real_triage_logs").filter(
+        (x) => (x?.patientEmail || "").toLowerCase() !== (userEmail || "").toLowerCase()
+      );
 
       localStorage.setItem("system_registered_users", JSON.stringify(currentUsers));
       localStorage.setItem("real_records", JSON.stringify(r));
       localStorage.setItem("real_medicines", JSON.stringify(m));
       localStorage.setItem("real_triage_logs", JSON.stringify(t));
+
+      // 3. Logout
       handleLogout();
     }
   };
@@ -155,6 +175,7 @@ export default function App() {
                 triageLogs={triageLogs}
                 setTriageLogs={setTriageLogs}
                 supportTickets={supportTickets}
+                setSupportTickets={setSupportTickets}
                 setViewingFileRecord={setViewingFileRecord}
                 onNavigateHome={() => setActiveTab("home")}
                 handleDeleteMyAccount={handleDeleteMyAccount}
@@ -173,7 +194,7 @@ export default function App() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
               <div>
                 <h3 style={{ fontSize: "18px", margin: 0, color: "#0f172a" }}>{viewingFileRecord.title}</h3>
-                <small style={{ color: "#64748b" }}>Category: {viewingFileRecord.type} • Uploaded: {viewingFileRecord.date}</small>
+                <small style={{ color: "#64748b" }}>Category: {viewingFileRecord.type} | Uploaded: {viewingFileRecord.date}</small>
               </div>
               <button onClick={() => setViewingFileRecord(null)} style={{ border: "none", background: "none", fontSize: "20px", cursor: "pointer" }}><FaTimes /></button>
             </div>
