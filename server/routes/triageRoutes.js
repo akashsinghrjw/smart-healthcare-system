@@ -13,7 +13,7 @@ router.post('/analyze', async (req, res) => {
 
     if (!apiKey) {
       return res.status(500).json({ 
-        message: 'GEMINI_API_KEY is not defined in Render environment.' 
+        message: 'GEMINI_API_KEY environment variable missing on server.' 
       });
     }
 
@@ -29,14 +29,15 @@ Provide concise, practical clinical guidance in 2-3 short sentences:
 
 Do not use markdown bold asterisks (**). Write in clean, professional, empathetic sentences.`;
 
-    // Try available model aliases in order to bypass 404
-    const modelCandidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-flash-latest', 'gemini-1.5-flash-latest'];
+    // Try current production models supported by Google
+    const modelCandidates = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
     let generatedText = null;
     let lastError = null;
 
-    for (const modelName of modelCandidates) {
+    for (const candidate of modelCandidates) {
       try {
-        const model = genAI.getGenerativeModel({ model: modelName });
+        // Explicitly use v1 / current model without deprecated 1.5 alias
+        const model = genAI.getGenerativeModel({ model: candidate });
         const result = await model.generateContent(promptText);
         const response = await result.response;
         const text = response.text();
@@ -46,7 +47,7 @@ Do not use markdown bold asterisks (**). Write in clean, professional, empatheti
         }
       } catch (err) {
         lastError = err;
-        console.warn(`Model ${modelName} call failed, trying next alias:`, err.message);
+        console.warn(`Model candidate ${candidate} failed:`, err.message);
       }
     }
 
@@ -54,10 +55,27 @@ Do not use markdown bold asterisks (**). Write in clean, professional, empatheti
       return res.status(200).json({ analysis: generatedText });
     }
 
-    throw lastError || new Error('No available Gemini model responded');
+    // Direct REST API Fallback if SDK has version pinning issues
+    const directUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const directRes = await fetch(directUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }]
+      })
+    });
+
+    const directData = await directRes.json();
+    const fallbackText = directData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (fallbackText && fallbackText.trim()) {
+      return res.status(200).json({ analysis: fallbackText.trim() });
+    }
+
+    throw lastError || new Error(directData?.error?.message || 'Gemini models unavailable');
 
   } catch (err) {
-    console.error('Gemini Execution Error:', err.message);
+    console.error('Final Triage Failure:', err.message);
     return res.status(500).json({ 
       message: `Gemini API Error: ${err.message || 'Failed to generate response'}` 
     });
