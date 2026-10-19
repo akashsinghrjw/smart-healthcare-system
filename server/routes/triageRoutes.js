@@ -1,24 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// Fallback rule-based dictionary if Gemini API limit/network fails
-const getClinicalFallback = (symptom) => {
-  const q = (symptom || '').toLowerCase();
-  if (q.includes('fever') || q.includes('bukhar') || q.includes('temp')) {
-    return "Clinical Advice: Elevated temperature detected. Stay well hydrated, rest in a cool environment, and take paracetamol if prescribed. If fever exceeds 102°F or persists beyond 3 days, consult a physician.";
-  }
-  if (q.includes('headache') || q.includes('migraine') || q.includes('sar')) {
-    return "Clinical Advice: Headache detected. Rest in a dark, quiet room, drink plenty of water, and limit screen time. Consult a doctor immediately if accompanied by visual changes or stiff neck.";
-  }
-  if (q.includes('cough') || q.includes('khansi') || q.includes('cold') || q.includes('throat')) {
-    return "Clinical Advice: Respiratory irritation noted. Drink warm fluids, try steam inhalation twice daily, and avoid cold items. If chest tightness or breathing difficulty occurs, seek clinical care.";
-  }
-  if (q.includes('stomach') || q.includes('pet') || q.includes('cramp') || q.includes('acidity')) {
-    return "Clinical Advice: Gastrointestinal distress reported. Take a light, non-spicy diet (khichdi, curd, bananas) and sip warm water. Visit a clinic if pain is acute or localized on the lower right abdomen.";
-  }
-  return `Clinical Assessment for "${symptom}": Maintain hydration and adequate rest. Monitor your condition over the next 24 hours. If symptoms escalate or persist, visit a medical clinic.`;
-};
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -27,36 +8,73 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ message: 'Symptom query is required' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
 
-    if (apiKey) {
-      try {
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-        const prompt = `You are an AI Clinical Triage Assistant for a hospital portal. A patient reports: "${query}".
-        Provide a concise, professional assessment in 2 to 3 sentences:
-        1. Common probable reasons.
-        2. Safe primary self-care/hydration recommendations.
-        3. Clear emergency red flags when to see an in-person doctor immediately.`;
-
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
-
-        if (responseText && responseText.trim()) {
-          return res.json({ analysis: responseText.trim() });
-        }
-      } catch (geminiErr) {
-        console.warn('Gemini API call error, switching to fallback:', geminiErr.message);
-      }
+    if (!apiKey) {
+      return res.status(500).json({ message: 'GEMINI_API_KEY not configured on server' });
     }
 
-    // Resilient fallback (no 502 crash)
-    const fallbackResponse = getClinicalFallback(query);
-    return res.json({ analysis: fallbackResponse });
+    const promptText = `You are a clinical triage AI assistant for a hospital patient portal.
+A patient has reported the following symptom or health query: "${query}".
+
+Provide concise, practical clinical guidance in 2-3 short sentences:
+1. Probable reasons for this symptom.
+2. Safe primary self-care/hydration recommendations.
+3. Clear red flag warnings when they must visit a doctor or dial 108.
+
+Do not use markdown bold asterisks. Keep the tone professional, friendly, and direct.`;
+
+    // Direct REST API Endpoint with v1beta
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: promptText }]
+          }
+        ]
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Google API Error Response:', data);
+      throw new Error(data?.error?.message || `Google API returned status ${response.status}`);
+    }
+
+    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!generatedText || !generatedText.trim()) {
+      throw new Error('Gemini API returned an empty text content');
+    }
+
+    return res.status(200).json({ analysis: generatedText.trim() });
+
   } catch (error) {
-    console.error('Server error on triage:', error);
-    res.status(500).json({ message: error.message || 'Internal triage error' });
+    console.error('Triage Route Execution Error:', error.message);
+
+    // Dynamic Intelligent Fallback if API key has network/quota block
+    const q = (req.body?.query || '').toLowerCase();
+    let fallbackText = `Clinical Guidance for "${req.body?.query || 'symptoms'}": `;
+
+    if (q.includes('fever') || q.includes('bukhar') || q.includes('temp')) {
+      fallbackText += "Elevated body temperature detected. Maintain complete physical rest, stay well-hydrated with clean fluids, and monitor body temperature every 4 hours. If fever crosses 102°F or persists beyond 48 hours, consult a physician immediately.";
+    } else if (q.includes('headache') || q.includes('migraine') || q.includes('sar')) {
+      fallbackText += "Cephalea / headache strain identified. Rest in a dark, quiet room, apply a cool compress to the forehead, and minimize phone/laptop screen time. Seek emergency medical evaluation if accompanied by stiff neck or vomiting.";
+    } else if (q.includes('dehydrat') || q.includes('paani') || q.includes('thirsty')) {
+      fallbackText += "Signs of acute fluid deficit detected. Drink Oral Rehydration Solution (ORS), coconut water, or salted buttermilk in frequent small sips. Avoid caffeine. Seek urgent medical care if you develop dizziness upon standing or dark urine.";
+    } else if (q.includes('chest') || q.includes('heart') || q.includes('breath')) {
+      fallbackText += "CRITICAL EMERGENCY ALERT: Symptoms involving chest pain or shortness of breath require immediate clinical evaluation. Dial 108 immediately or visit the nearest emergency room.";
+    } else {
+      fallbackText += "Symptoms suggest preliminary clinical strain. Ensure proper oral hydration, take adequate resting hours, and observe your condition. If discomfort escalates or persists beyond 48 hours, schedule an in-person doctor consultation.";
+    }
+
+    return res.status(200).json({ analysis: fallbackText });
   }
 });
 
