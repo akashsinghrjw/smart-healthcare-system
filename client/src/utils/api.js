@@ -29,7 +29,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // User Authentication & Account
+  // Authentication & Security Routes
   register: (data) =>
     request("/api/auth/register", {
       method: "POST",
@@ -41,6 +41,11 @@ export const api = {
       body: JSON.stringify(data)
     }),
   getProfile: () => request("/api/auth/profile"),
+  updatePassword: (newPassword) =>
+    request("/api/auth/update-password", {
+      method: "PUT",
+      body: JSON.stringify({ newPassword })
+    }),
   deleteAccount: () =>
     request("/api/auth/delete-account", {
       method: "DELETE"
@@ -70,7 +75,7 @@ export const api = {
       method: "DELETE"
     }),
 
-  // AI Symptom Triage
+  // AI Symptom Triage (Google Gemini 1.5 Flash via Render)
   analyzeSymptoms: (query, userContext = {}) =>
     request("/api/triage/analyze", {
       method: "POST",

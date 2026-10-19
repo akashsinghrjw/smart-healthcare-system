@@ -1,233 +1,286 @@
-// src/pages/HealthRecords.jsx
-import React, { useState } from "react";
-import { FaFileMedicalAlt, FaFileUpload, FaPlus, FaEye, FaEdit, FaTrash, FaFileImage, FaTimes } from "react-icons/fa";
-import { safeLoad } from "../utils/storage";
+import React, { useState } from 'react';
+import { FaFileMedicalAlt, FaEye, FaTrashAlt, FaUpload, FaTimes } from 'react-icons/fa';
 
-export default function HealthRecords({ records, setRecords, userName, userEmail, setViewingFileRecord }) {
-  const [newRecord, setNewRecord] = useState({
-    title: "",
-    type: "Diagnostic Lab Report",
-    date: "",
-    fileData: "",
-    fileName: ""
+export default function HealthRecords({ userEmail }) {
+  const [vaultReports, setVaultReports] = useState(() => {
+    const saved = localStorage.getItem(`vault_reports_${userEmail}`);
+    return saved
+      ? JSON.parse(saved)
+      : [
+          {
+            id: 1,
+            title: 'Complete Blood Count (CBC)',
+            type: 'Diagnostic Lab Report',
+            date: 'Oct 18, 2026',
+            fileData: null,
+            fileName: 'CBC_Report.pdf'
+          }
+        ];
   });
-  const [editingRecord, setEditingRecord] = useState(null);
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const [recordTitle, setRecordTitle] = useState('');
+  const [recordType, setRecordType] = useState('Diagnostic Lab Report');
+  const [selectedFileObj, setSelectedFileObj] = useState(null);
+  const [viewingReport, setViewingReport] = useState(null);
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert("File size 2MB se kam honi chahiye!");
+  const saveReports = (list) => {
+    setVaultReports(list);
+    localStorage.setItem(`vault_reports_${userEmail}`, JSON.stringify(list));
+  };
+
+  const handleUploadReport = (e) => {
+    e.preventDefault();
+    if (!recordTitle.trim()) {
+      alert('Kripya report ka title bharein!');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setNewRecord((prev) => ({
-        ...prev,
-        fileData: event.target.result,
-        fileName: file.name
-      }));
-    };
-    reader.readAsDataURL(file);
+    if (selectedFileObj) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newRecord = {
+          id: Date.now(),
+          title: recordTitle.trim(),
+          type: recordType,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          fileData: reader.result,
+          fileName: selectedFileObj.name
+        };
+        saveReports([newRecord, ...vaultReports]);
+        setRecordTitle('');
+        setSelectedFileObj(null);
+        alert('Document vault me safely upload ho gaya!');
+      };
+      reader.readAsDataURL(selectedFileObj);
+    } else {
+      const newRecord = {
+        id: Date.now(),
+        title: recordTitle.trim(),
+        type: recordType,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        fileData: null,
+        fileName: 'Clinical_Note.pdf'
+      };
+      saveReports([newRecord, ...vaultReports]);
+      setRecordTitle('');
+      alert('Report title save ho gaya!');
+    }
   };
 
-  const handleAddRecord = (e) => {
-    e.preventDefault();
-    if (!newRecord.title.trim()) return;
-
-    const currentRecords = safeLoad("real_records");
-    const item = {
-      id: Date.now(),
-      title: newRecord.title.trim(),
-      type: newRecord.type,
-      patientName: userName,
-      patientEmail: userEmail,
-      date: newRecord.date || new Date().toISOString().split("T")[0],
-      fileData: newRecord.fileData || "",
-      fileName: newRecord.fileName || "Document File"
-    };
-
-    const updated = [item, ...currentRecords];
-    setRecords(updated);
-    localStorage.setItem("real_records", JSON.stringify(updated));
-    setNewRecord({
-      title: "",
-      type: "Diagnostic Lab Report",
-      date: "",
-      fileData: "",
-      fileName: ""
-    });
+  const handleDeleteReport = (id) => {
+    if (window.confirm('Kya aap yeh report vault se delete karna chahte hain?')) {
+      const updated = vaultReports.filter((r) => r.id !== id);
+      saveReports(updated);
+    }
   };
-
-  const handleSaveRecordEdit = (e) => {
-    e.preventDefault();
-    if (!editingRecord) return;
-
-    const currentRecords = safeLoad("real_records");
-    const updated = currentRecords.map((r) => (r.id === editingRecord.id ? editingRecord : r));
-    setRecords(updated);
-    localStorage.setItem("real_records", JSON.stringify(updated));
-    setEditingRecord(null);
-  };
-
-  const handleDeleteRecord = (id) => {
-    const currentRecords = safeLoad("real_records").filter((r) => r?.id !== id);
-    setRecords(currentRecords);
-    localStorage.setItem("real_records", JSON.stringify(currentRecords));
-  };
-
-  const userRecords = (records || []).filter(
-    (r) => (r?.patientEmail || "").toLowerCase() === (userEmail || "").toLowerCase()
-  );
 
   return (
-    <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "22px" }}>
-      <div style={{ fontSize: "15px", fontWeight: "700", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-        <FaFileMedicalAlt color="#0284c7" size={16} style={{ width: "16px", height: "16px", flexShrink: 0 }} />
-        <span>Health Records Vault ({userRecords.length})</span>
+    <div style={{ maxWidth: '1000px', margin: '20px auto 60px', padding: '0 20px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px' }}>
+          Personal Health Records Vault
+        </h2>
+        <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+          Safely store, preview, and download your diagnostic lab reports, prescriptions, and clinical summaries.
+        </p>
       </div>
-      <small style={{ color: "#64748b", display: "block", marginBottom: "12px" }}>
-        Upload medical lab reports, prescriptions, or docs images from your phone/laptop to database!
-      </small>
 
-      <form onSubmit={handleAddRecord} style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "8px", marginBottom: "14px" }}>
-        <input
-          style={{ padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "8px", fontSize: "13px" }}
-          placeholder="Report Title (e.g. Blood Test Report)"
-          value={newRecord.title}
-          onChange={(e) => setNewRecord({ ...newRecord, title: e.target.value })}
-          required
-        />
-
-        <select
-          style={{ padding: "8px", border: "1.5px solid #cbd5e1", borderRadius: "8px", fontSize: "12px" }}
-          value={newRecord.type}
-          onChange={(e) => setNewRecord({ ...newRecord, type: e.target.value })}
-        >
-          <option>Diagnostic Lab Report</option>
-          <option>Doctor Prescription</option>
-          <option>Discharge Summary</option>
-          <option>X-Ray / Scan Document</option>
-        </select>
-
-        {/* COMPACT UPLOAD INPUT ROW */}
-        <div style={{ gridColumn: "span 2", display: "flex", alignItems: "center", gap: "10px", background: "#f8fafc", padding: "8px 12px", border: "1.5px dashed #cbd5e1", borderRadius: "8px" }}>
-          <FaFileUpload color="#0284c7" size={16} style={{ width: "16px", height: "16px", minWidth: "16px", flexShrink: 0 }} />
-          <input
-            type="file"
-            accept="image/*,application/pdf,.doc,.docx"
-            style={{ fontSize: "12px", width: "100%", color: "#475569" }}
-            onChange={handleFileUpload}
-          />
+      {/* Upload Form Box */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <FaUpload color="#0d9488" size={16} />
+          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>Upload New Clinical Document</h3>
         </div>
 
-        <button
-          type="submit"
-          style={{
-            gridColumn: "span 2",
-            background: "linear-gradient(135deg, #0284c7 0%, #0d9488 100%)",
-            color: "#ffffff",
-            border: "none",
-            padding: "9px",
-            borderRadius: "8px",
-            fontWeight: "700",
-            fontSize: "13px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "6px"
-          }}
-        >
-          <FaPlus size={12} style={{ width: "12px", height: "12px" }} /> Upload & Save Document to Vault
-        </button>
-      </form>
-
-      <div style={{ maxHeight: "250px", overflowY: "auto" }}>
-        {userRecords.length === 0 ? (
-          <p style={{ fontSize: "12.5px", color: "#94a3b8", textAlign: "center", padding: "16px" }}>
-            No reports added. Choose file and click upload above!
-          </p>
-        ) : (
-          userRecords.map((r) => (
-            <div key={r?.id || Math.random()} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "10px 14px", marginBottom: "8px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <strong style={{ fontSize: "13.5px", color: "#0f172a" }}>{r?.title}</strong>
-                  <small style={{ display: "block", color: "#64748b", marginTop: "2px" }}>
-                    {r?.type} • Date: {r?.date}
-                  </small>
-                  {r?.fileName && (
-                    <span style={{ fontSize: "11px", color: "#0284c7", display: "inline-flex", alignItems: "center", gap: "4px", marginTop: "2px" }}>
-                      <FaFileImage size={11} style={{ width: "11px", height: "11px" }} /> {r?.fileName}
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ display: "flex", gap: "6px" }}>
-                  <button
-                    onClick={() => setViewingFileRecord(r)}
-                    style={{ background: "#e0f2fe", color: "#0284c7", border: "1px solid #bae6fd", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                  >
-                    <FaEye size={11} style={{ width: "11px", height: "11px" }} /> View
-                  </button>
-                  <button
-                    onClick={() => setEditingRecord({ ...r })}
-                    style={{ background: "#f1f5f9", color: "#475569", border: "1px solid #cbd5e1", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", cursor: "pointer" }}
-                  >
-                    <FaEdit size={11} style={{ width: "11px", height: "11px" }} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteRecord(r?.id)}
-                    style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fecaca", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", cursor: "pointer" }}
-                  >
-                    <FaTrash size={11} style={{ width: "11px", height: "11px" }} />
-                  </button>
-                </div>
-              </div>
+        <form onSubmit={handleUploadReport}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '5px' }}>Document / Test Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Thyroid Profile, Chest X-Ray"
+                value={recordTitle}
+                onChange={(e) => setRecordTitle(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', boxSizing: 'border-box' }}
+              />
             </div>
-          ))
-        )}
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#475569', marginBottom: '5px' }}>Document Type</label>
+              <select
+                value={recordType}
+                onChange={(e) => setRecordType(e.target.value)}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', background: '#fff', boxSizing: 'border-box' }}
+              >
+                <option value="Diagnostic Lab Report">Diagnostic Lab Report</option>
+                <option value="Doctor Prescription">Doctor Prescription</option>
+                <option value="Discharge Summary">Discharge Summary</option>
+                <option value="Vaccination Record">Vaccination Record</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <label
+              style={{
+                background: '#f8fafc',
+                border: '1.5px dashed #0d9488',
+                borderRadius: '8px',
+                padding: '10px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#0d9488',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <FaFileMedicalAlt /> {selectedFileObj ? `File Selected: ${selectedFileObj.name}` : 'Choose PDF or Image File'}
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                onChange={(e) => setSelectedFileObj(e.target.files[0])}
+                style={{ display: 'none' }}
+              />
+            </label>
+
+            <button
+              type="submit"
+              style={{
+                padding: '11px 26px',
+                background: '#0d9488',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Upload to Vault
+            </button>
+          </div>
+        </form>
       </div>
 
-      {/* MODAL: EDIT RECORD DETAILS */}
-      {editingRecord && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999 }} onClick={() => setEditingRecord(null)}>
-          <div style={{ background: "#ffffff", width: "90%", maxWidth: "460px", padding: "24px", borderRadius: "16px" }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-              <h3 style={{ fontSize: "17px", margin: 0 }}>Update Report Information</h3>
-              <button onClick={() => setEditingRecord(null)} style={{ border: "none", background: "none", fontSize: "18px", cursor: "pointer" }}><FaTimes /></button>
+      {/* Reports Vault List */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#0f172a' }}>Uploaded Medical Vault Files</h3>
+          <span style={{ fontSize: '12px', background: '#f0fdfa', color: '#0d9488', padding: '3px 10px', borderRadius: '6px', fontWeight: '700' }}>
+            Total Files: {vaultReports.length}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {vaultReports.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', margin: '30px 0' }}>No records uploaded yet.</p>
+          ) : (
+            vaultReports.map((report) => (
+              <div
+                key={report.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: '#f8fafc',
+                  padding: '14px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                    <FaFileMedicalAlt />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '14.5px', color: '#0f172a', display: 'block' }}>{report.title}</strong>
+                    <small style={{ color: '#64748b', fontSize: '12px' }}>
+                      Category: {report.type} • Uploaded on {report.date}
+                    </small>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => setViewingReport(report)}
+                    style={{
+                      background: '#0d9488',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '7px 14px',
+                      borderRadius: '6px',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaEye size={12} /> View Document
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteReport(report.id)}
+                    style={{ background: '#fee2e2', color: '#ef4444', border: 'none', padding: '7px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                    title="Delete Report"
+                  >
+                    <FaTrashAlt />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* DOCUMENT PREVIEW MODAL */}
+      {viewingReport && (
+        <div
+          onClick={() => setViewingReport(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px' }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '16px', padding: '26px', width: '100%', maxWidth: '580px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{viewingReport.title}</h3>
+                <small style={{ color: '#64748b' }}>{viewingReport.type} • {viewingReport.date}</small>
+              </div>
+              <button onClick={() => setViewingReport(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>
+                <FaTimes />
+              </button>
             </div>
-            <form onSubmit={handleSaveRecordEdit}>
-              <div style={{ marginBottom: "12px" }}>
-                <label style={{ fontSize: "12px", color: "#475569", fontWeight: "600", display: "block", marginBottom: "4px" }}>Report Title</label>
-                <input
-                  style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", boxSizing: "border-box" }}
-                  value={editingRecord.title}
-                  onChange={(e) => setEditingRecord({ ...editingRecord, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ fontSize: "12px", color: "#475569", fontWeight: "600", display: "block", marginBottom: "4px" }}>Report Type</label>
-                <select
-                  style={{ width: "100%", padding: "8px 12px", border: "1.5px solid #cbd5e1", borderRadius: "6px", fontSize: "13px", boxSizing: "border-box" }}
-                  value={editingRecord.type}
-                  onChange={(e) => setEditingRecord({ ...editingRecord, type: e.target.value })}
-                >
-                  <option>Diagnostic Lab Report</option>
-                  <option>Doctor Prescription</option>
-                  <option>Discharge Summary</option>
-                  <option>X-Ray / Scan Document</option>
-                </select>
-              </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button type="button" style={{ flex: 1, padding: "8px", border: "1px solid #cbd5e1", borderRadius: "6px", background: "#ffffff", cursor: "pointer" }} onClick={() => setEditingRecord(null)}>Cancel</button>
-                <button type="submit" style={{ flex: 1, padding: "8px", border: "none", borderRadius: "6px", background: "#0d9488", color: "#ffffff", fontWeight: "600", cursor: "pointer" }}>Save Changes</button>
-              </div>
-            </form>
+
+            <div style={{ textAlign: 'center', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', minHeight: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              {viewingReport.fileData ? (
+                viewingReport.fileData.startsWith('data:image') ? (
+                  <img src={viewingReport.fileData} alt={viewingReport.title} style={{ maxWidth: '100%', maxHeight: '350px', borderRadius: '8px', objectFit: 'contain' }} />
+                ) : (
+                  <div>
+                    <FaFileMedicalAlt size={48} color="#0d9488" style={{ marginBottom: '10px' }} />
+                    <h4 style={{ margin: '0 0 6px' }}>{viewingReport.fileName}</h4>
+                    <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 14px' }}>Document safely stored in vault.</p>
+                    <a href={viewingReport.fileData} download={viewingReport.fileName} style={{ background: '#0d9488', color: '#fff', padding: '8px 18px', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}>
+                      Download File
+                    </a>
+                  </div>
+                )
+              ) : (
+                <div>
+                  <FaFileMedicalAlt size={44} color="#94a3b8" style={{ marginBottom: '8px' }} />
+                  <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>Clinical text record entry stored in your cloud vault.</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button onClick={() => setViewingReport(null)} style={{ background: '#0d9488', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

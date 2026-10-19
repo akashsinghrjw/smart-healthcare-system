@@ -13,7 +13,7 @@ const generateToken = (id) => {
   });
 };
 
-// Register Route
+// 1. User Registration Route
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -28,6 +28,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Hash Password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -50,7 +51,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login Route
+// 2. User Login Route
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -78,21 +79,39 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get Current User Profile (Protected)
+// 3. Get Current User Profile (Protected)
 router.get('/profile', protect, async (req, res) => {
   res.json(req.user);
 });
 
-// Delete Account Route (MongoDB Se Delete Karega)
+// 4. Update Password Route (Drawer Security Hub)
+router.put('/update-password', protect, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password at least 6 characters ka hona chahiye' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await User.findByIdAndUpdate(req.user._id, { password: hashedPassword });
+    res.json({ message: 'Password successfully updated in MongoDB!' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// 5. Delete Account Route (MongoDB Se Complete Eradication)
 router.delete('/delete-account', protect, async (req, res) => {
   try {
     const userId = req.user._id;
     const userEmail = req.user.email;
 
-    // 1. Delete user from MongoDB users collection
+    // Delete user from users collection
     await User.findByIdAndDelete(userId);
 
-    // 2. Delete user's associated medical records and medicines
+    // Delete user's associated medical records and medicines
     if (MedicalRecord) {
       await MedicalRecord.deleteMany({ patientEmail: userEmail });
     }
@@ -100,7 +119,7 @@ router.delete('/delete-account', protect, async (req, res) => {
       await Medication.deleteMany({ patientEmail: userEmail });
     }
 
-    res.json({ message: 'Account and all health data deleted successfully from MongoDB' });
+    res.json({ message: 'Account and associated records deleted permanently from MongoDB' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
