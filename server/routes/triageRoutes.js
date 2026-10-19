@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -11,65 +12,41 @@ router.post('/analyze', async (req, res) => {
     const apiKey = (process.env.GEMINI_API_KEY || '').trim();
 
     if (!apiKey) {
-      console.error('GEMINI_API_KEY is not defined in server environment');
-      return res.status(500).json({ message: 'GEMINI_API_KEY missing on server' });
-    }
-
-    const promptText = `You are a clinical AI triage assistant for a hospital patient portal.
-A patient asks about the following health condition or symptoms: "${query.trim()}".
-
-Provide a direct, dynamic, and customized clinical guidance in 3 concise sentences:
-1. Probable Causes: Specifically explain why "${query.trim()}" happens.
-2. Home Care & Hydration: Immediate actionable steps (what to drink/eat, remedies, rest).
-3. Red Flags: Urgent warning signs when they must visit an emergency clinic or call 108.
-
-Do not use markdown bold asterisks (**). Be professional, helpful, and reassuring.`;
-
-    // Direct Google Generative Language v1beta Endpoint with both header and query key support
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const googleRes = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: promptText }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 350
-        }
-      })
-    });
-
-    const data = await googleRes.json();
-
-    if (!googleRes.ok) {
-      console.error('Google Gemini API Error:', JSON.stringify(data));
-      return res.status(200).json({
-        analysis: `AI Clinical Notice: ${data?.error?.message || 'Unable to connect to Google Gemini service. Please verify API key.'}`
+      console.error('CRITICAL: GEMINI_API_KEY environment variable is missing on server.');
+      return res.status(500).json({ 
+        message: 'Server configuration error: GEMINI_API_KEY is not defined in Render environment.' 
       });
     }
 
-    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Initialize Official Google Gemini Client
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-    if (generatedText && generatedText.trim()) {
-      return res.status(200).json({ analysis: generatedText.trim() });
+    const promptText = `You are a clinical AI triage doctor assistant for an official hospital patient portal.
+A patient has reported the following health concern or symptoms: "${query.trim()}".
+
+Provide concise, practical, and customized clinical guidance in 3 clear sentences:
+1. Probable Causes: Specifically explain why "${query.trim()}" occurs.
+2. Immediate Home Care & Relief: Actionable steps (fluids to drink, dietary care, remedies, rest).
+3. Red Flag Warnings: Concrete danger symptoms when they must visit a doctor or emergency room immediately.
+
+Do not use markdown bold asterisks (**) or bullet points. Keep it professional, empathetic, and in natural readable clinical sentences.`;
+
+    const result = await model.generateContent(promptText);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text || !text.trim()) {
+      return res.status(502).json({ message: 'Gemini service returned empty text response.' });
     }
 
-    return res.status(200).json({
-      analysis: `Clinical Advice for "${query}": Maintain high fluid intake, rest in a comfortable room, and observe your symptoms. If discomfort escalates, seek medical consultation.`
-    });
+    // SUCCESS: Return actual live Gemini analysis
+    return res.status(200).json({ analysis: text.trim() });
 
   } catch (err) {
-    console.error('Triage route execution error:', err.message);
-    return res.status(200).json({
-      analysis: `Clinical Guidance for "${req.body?.query || 'symptoms'}": Take adequate rest, hydrate with clean water or electrolyte fluids, and consult a physician if condition persists.`
+    console.error('Gemini Execution Error:', err.message);
+    return res.status(500).json({ 
+      message: `Gemini API Error: ${err.message || 'Failed to generate clinical guidance'}` 
     });
   }
 });

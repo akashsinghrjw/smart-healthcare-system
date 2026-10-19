@@ -112,7 +112,7 @@ export default function Dashboard({
   ]);
 
   // ==========================================
-  // AI SYMPTOMS ADVISOR (DYNAMIC OUTPUT)
+  // AI SYMPTOMS ADVISOR (DIRECT GEMINI RESPONSE)
   // ==========================================
   const [symptomQuery, setSymptomQuery] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -132,11 +132,11 @@ export default function Dashboard({
       } else if (res && res.message) {
         setAiResult(res.message);
       } else {
-        setAiResult(`Clinical Assessment for "${query}": Ensure proper oral hydration, take physical rest, and consult a doctor if discomfort continues.`);
+        setAiResult('Clinical Guidance: Stay hydrated, take adequate rest, and observe your symptoms.');
       }
     } catch (err) {
       console.error("AI Triage Fetch Error:", err);
-      setAiResult(`Notice: ${err.message || 'Server connection delayed. Please retry in a few moments.'}`);
+      setAiResult(`Notice: ${err.message || 'Failed to reach AI service. Please retry in a moment.'}`);
     } finally {
       setAiLoading(false);
     }
