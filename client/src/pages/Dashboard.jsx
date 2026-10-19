@@ -19,7 +19,6 @@ import {
   FaExclamationTriangle,
   FaEye,
   FaClock,
-  FaCalendarAlt,
   FaUserEdit,
   FaShieldAlt,
   FaSlidersH
@@ -112,10 +111,36 @@ export default function Dashboard({
     { id: 2, text: 'Password and medical data encrypted with SSL.', time: 'Today' }
   ]);
 
-  // AI Symptoms Advisor State
+  // ==========================================
+  // AI SYMPTOMS ADVISOR (DYNAMIC OUTPUT)
+  // ==========================================
   const [symptomQuery, setSymptomQuery] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+
+  const handleAnalyzeSymptom = async (queryText) => {
+    const query = (queryText || symptomQuery || '').trim();
+    if (!query) return;
+
+    setAiLoading(true);
+    setAiResult(null);
+
+    try {
+      const res = await api.analyzeSymptoms(query, { email: userEmail, name: userName });
+      if (res && res.analysis) {
+        setAiResult(res.analysis);
+      } else if (res && res.message) {
+        setAiResult(res.message);
+      } else {
+        setAiResult(`Clinical Assessment for "${query}": Ensure proper oral hydration, take physical rest, and consult a doctor if discomfort continues.`);
+      }
+    } catch (err) {
+      console.error("AI Triage Fetch Error:", err);
+      setAiResult(`Notice: ${err.message || 'Server connection delayed. Please retry in a few moments.'}`);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // ==========================================
   // HEALTH RECORDS VAULT
@@ -192,7 +217,7 @@ export default function Dashboard({
   };
 
   // ====================================================
-  // FLEXIBLE MEDICINE TRACKER (DATE-RANGE / DAY-WISE / PARTICULAR DATE)
+  // FLEXIBLE MEDICINE ROUTINE TRACKER
   // ====================================================
   const todayStr = new Date().toISOString().split('T')[0];
   const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -225,8 +250,7 @@ export default function Dashboard({
         ];
   });
 
-  // Schedule Configuration Form
-  const [scheduleMode, setScheduleMode] = useState('range'); // 'range' | 'single' | 'weekly'
+  const [scheduleMode, setScheduleMode] = useState('range');
   const [newMedName, setNewMedName] = useState('');
   const [newMedTime, setNewMedTime] = useState('08:00');
   const [newStartDate, setNewStartDate] = useState(todayStr);
@@ -395,22 +419,6 @@ export default function Dashboard({
     localStorage.setItem(`bg_${userEmail}`, bloodGroup);
     setProfileSavedMsg('Profile details successfully updated!');
     setTimeout(() => setProfileSavedMsg(''), 3000);
-  };
-
-  const handleAnalyzeSymptom = async (queryText) => {
-    const query = queryText || symptomQuery;
-    if (!query.trim()) return;
-
-    setAiLoading(true);
-    setAiResult(null);
-    try {
-      const res = await api.analyzeSymptoms(query, { email: userEmail, name: userName });
-      setAiResult(res?.analysis || res?.message || 'Assessment completed successfully.');
-    } catch (err) {
-      setAiResult('Clinical Guidance: Stay hydrated, take rest, and visit a doctor if symptoms persist.');
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   return (
@@ -712,7 +720,7 @@ export default function Dashboard({
         </div>
 
         {aiResult && (
-          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '14px 16px', borderRadius: '8px', marginTop: '16px', fontSize: '14px', color: '#166534', lineHeight: '1.5' }}>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '14px 16px', borderRadius: '8px', marginTop: '16px', fontSize: '14px', color: '#166534', lineHeight: '1.6' }}>
             <b>Clinical Guidance:</b> {aiResult}
           </div>
         )}
@@ -823,7 +831,7 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* FLEXIBLE MEDICINE ROUTINE TRACKER (DATE-RANGE / DAY-WISE / PARTICULAR DATE) */}
+        {/* FLEXIBLE MEDICINE ROUTINE TRACKER */}
         <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #e2e8f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -838,7 +846,7 @@ export default function Dashboard({
             Schedule courses date-to-date, on particular dates, or on weekly routine days.
           </p>
 
-          {/* Schedule Mode Selector Tabs */}
+          {/* Mode Selector Tabs */}
           <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '8px', marginBottom: '14px' }}>
             <button
               type="button"
@@ -916,7 +924,6 @@ export default function Dashboard({
               />
             </div>
 
-            {/* Mode 1: Date-to-Date Range */}
             {scheduleMode === 'range' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
                 <div>
@@ -942,7 +949,6 @@ export default function Dashboard({
               </div>
             )}
 
-            {/* Mode 2: Particular Single Date */}
             {scheduleMode === 'single' && (
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '2px' }}>Particular Scheduled Date</label>
@@ -956,7 +962,6 @@ export default function Dashboard({
               </div>
             )}
 
-            {/* Mode 3: Weekly Day Selection */}
             {scheduleMode === 'weekly' && (
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Select Repeat Days:</label>
@@ -1006,7 +1011,7 @@ export default function Dashboard({
             </button>
           </form>
 
-          {/* Active Medicines Scheduled List */}
+          {/* Active Medicines List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
             {medList.length === 0 ? (
               <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', margin: '14px 0' }}>
@@ -1266,9 +1271,7 @@ export default function Dashboard({
                 <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{viewingReport.title}</h3>
                 <small style={{ color: '#64748b' }}>{viewingReport.type} • {viewingReport.date}</small>
               </div>
-              <button onClick={() => setViewingReport(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>
-                <FaTimes />
-              </button>
+              <button onClick={() => setViewingReport(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
             </div>
 
             <div style={{ textAlign: 'center', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', minHeight: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
