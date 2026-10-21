@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Home from "./pages/Home";
@@ -25,43 +26,82 @@ export default function App() {
   const [triageLogs, setTriageLogs] = useState([]);
   const [supportTickets, setSupportTickets] = useState([]);
 
-  const refreshState = () => {
-    setRegisteredUsers(safeLoad("system_registered_users"));
-    setRecords(safeLoad("real_records"));
-    setMedicines(safeLoad("real_medicines"));
-    setTriageLogs(safeLoad("real_triage_logs"));
-    setSupportTickets(safeLoad("support_tickets_list"));
-  };
+  // Load existing browser data and live patients from MongoDB
+  const refreshState = useCallback(async (role = userRole) => {
+    setRecords(safeLoad("real_records") || []);
+    setMedicines(safeLoad("real_medicines") || []);
+    setTriageLogs(safeLoad("real_triage_logs") || []);
+    setSupportTickets(safeLoad("support_tickets_list") || []);
 
-  useEffect(() => {
-    try {
-      const token = localStorage.getItem("token");
-      const role = localStorage.getItem("userRole") || "patient";
-      const name = localStorage.getItem("userName") || "Patient";
-      const email = localStorage.getItem("userEmail") || "";
-      const phone = localStorage.getItem("userPhone") || "";
+    // Local data is used as a fallback if the API fails
+    setRegisteredUsers(safeLoad("system_registered_users") || []);
 
-      if (token) {
-        setIsLoggedIn(true);
-        setUserRole(role);
-        setUserName(name);
-        setUserEmail(email);
-        setUserPhone(phone);
+    if (role === "admin") {
+      try {
+        const patients = await api.getPatients();
+
+        if (Array.isArray(patients)) {
+          setRegisteredUsers(patients);
+        } else {
+          console.error("Patients API did not return a list.");
+        }
+      } catch (error) {
+        console.error(
+          "Unable to fetch patients from MongoDB:",
+          error.message
+        );
       }
-      refreshState();
-    } catch (e) {
-      console.warn("Init handled:", e);
     }
-  }, []);
+  }, [userRole]);
+
+  // Restore login state when the app opens
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("userRole") || "patient";
+    const name = localStorage.getItem("userName") || "Patient";
+    const email = localStorage.getItem("userEmail") || "";
+    const phone = localStorage.getItem("userPhone") || "";
+    const savedTab = localStorage.getItem("activeTab") || "home";
+
+    setRecords(safeLoad("real_records") || []);
+    setMedicines(safeLoad("real_medicines") || []);
+    setTriageLogs(safeLoad("real_triage_logs") || []);
+    setSupportTickets(safeLoad("support_tickets_list") || []);
+    setRegisteredUsers(safeLoad("system_registered_users") || []);
+
+    if (token) {
+      setIsLoggedIn(true);
+      setUserRole(role);
+      setUserName(name);
+      setUserEmail(email);
+      setUserPhone(phone);
+      setActiveTab(savedTab);
+
+      if (role === "admin") {
+        refreshState(role);
+      }
+    }
+  }, [refreshState]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    localStorage.setItem("activeTab", tab);
+  };
 
   const handleLoginSuccess = (role, name, email, phone) => {
     setIsLoggedIn(true);
     setUserRole(role);
     setUserName(name);
     setUserEmail(email);
-    setUserPhone(phone);
-    setActiveTab("portal");
-    refreshState();
+    setUserPhone(phone || "");
+
+    localStorage.setItem("userRole", role);
+    localStorage.setItem("userName", name || "Patient");
+    localStorage.setItem("userEmail", email || "");
+    localStorage.setItem("userPhone", phone || "");
+
+    handleTabChange("portal");
+    refreshState(role);
   };
 
   const handleLogout = () => {
@@ -70,32 +110,48 @@ export default function App() {
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
     localStorage.removeItem("userPhone");
+    localStorage.removeItem("activeTab");
 
     setIsLoggedIn(false);
     setUserRole("patient");
     setUserName("Patient");
     setUserEmail("");
     setUserPhone("");
+    setRegisteredUsers([]);
     setActiveTab("home");
-    refreshState();
+
+    alert("👋 Aap safaltapurvak logout ho gaye hain. Phir milenge!");
   };
 
   const handleDeleteMyAccount = async () => {
     if (window.confirm("Kya aap apna account delete karna chahte hain?")) {
       try {
         await api.deleteAccount();
-      } catch (err) {
-        console.warn("Delete account note:", err.message);
+        alert("Your account has been deleted.");
+      } catch (error) {
+        alert("Account delete nahi hua: " + error.message);
+        return;
       }
+
       handleLogout();
     }
   };
 
   return (
-    <div style={{ backgroundColor: "#f8fafc", fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif", color: "#0f172a", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        backgroundColor: "#f8fafc",
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+        color: "#0f172a",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         isLoggedIn={isLoggedIn}
         userRole={userRole}
         userName={userName}
@@ -111,7 +167,7 @@ export default function App() {
         {activeTab === "home" ? (
           <Home
             isLoggedIn={isLoggedIn}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleTabChange}
             showAuthModal={showAuthModal}
             setShowAuthModal={setShowAuthModal}
             authMode={authMode}
@@ -121,7 +177,13 @@ export default function App() {
             onLoginSuccess={handleLoginSuccess}
           />
         ) : (
-          <main style={{ maxWidth: "1240px", margin: "30px auto 60px", padding: "0 24px" }}>
+          <main
+            style={{
+              maxWidth: "1240px",
+              margin: "30px auto 60px",
+              padding: "0 24px",
+            }}
+          >
             {userRole === "admin" ? (
               <OwnerDashboard
                 registeredUsers={registeredUsers}
@@ -134,7 +196,7 @@ export default function App() {
                 setTriageLogs={setTriageLogs}
                 supportTickets={supportTickets}
                 setSupportTickets={setSupportTickets}
-                onNavigateHome={() => setActiveTab("home")}
+                onNavigateHome={() => handleTabChange("home")}
               />
             ) : (
               <Dashboard
@@ -143,7 +205,7 @@ export default function App() {
                 userEmail={userEmail}
                 userPhone={userPhone}
                 setUserPhone={setUserPhone}
-                onNavigateHome={() => setActiveTab("home")}
+                onNavigateHome={() => handleTabChange("home")}
                 handleDeleteMyAccount={handleDeleteMyAccount}
               />
             )}
@@ -152,7 +214,7 @@ export default function App() {
       </div>
 
       <Footer
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         onOpenAuth={(mode, role) => {
           setAuthMode(mode);
           setAuthRole(role);

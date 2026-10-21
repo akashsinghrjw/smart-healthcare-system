@@ -1,62 +1,261 @@
 import React from "react";
-import { FaStethoscope, FaUserCircle, FaSignOutAlt, FaSignInAlt } from "react-icons/fa";
+import { FaStethoscope } from "react-icons/fa";
 
-export default function Navbar({ activeTab, setActiveTab, isLoggedIn, userRole, userName, onLogout, onOpenAuth }) {
+export default function Navbar({
+  activeTab,
+  setActiveTab,
+  isLoggedIn,
+  userRole,
+  userName,
+  onLogout,
+  onOpenAuth
+}) {
+  const handleScrollTo = (e, targetId) => {
+    e.preventDefault();
+    if (activeTab !== "home") {
+      setActiveTab("home");
+      setTimeout(() => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
+    } else {
+      const element = document.getElementById(targetId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   return (
-    <header style={{ background: "#ffffff", borderBottom: "1px solid #e2e8f0", padding: "14px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 1000 }}>
-      {/* BRAND LOGO */}
+    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 35px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 1000 }}>
+      {/* Purana Original Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }} onClick={() => setActiveTab("home")}>
-        <div style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #0d9488 0%, #059669 100%)", color: "#ffffff", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>
-          <FaStethoscope />
+        <div style={{ background: "#0d9488", color: "#fff", width: "40px", height: "40px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(13, 148, 136, 0.25)" }}>
+          <FaStethoscope size={20} />
         </div>
         <div>
-          <h2 style={{ fontSize: "17px", fontWeight: "800", color: "#0f172a", margin: 0 }}>AI-Powered Healthcare System</h2>
-          <span style={{ fontSize: "10px", color: "#0d9488", fontWeight: "700" }}>SMART HEALTHCARE</span>
+          <div style={{ fontWeight: "800", fontSize: "16px", color: "#0f172a" }}>
+            AI-Powered Healthcare System
+          </div>
+          <small style={{ color: "#0d9488", fontSize: "10.5px", fontWeight: "700", letterSpacing: "0.5px" }}>
+            SMART HEALTHCARE
+          </small>
         </div>
       </div>
-
-      {/* CLEAN MINIMAL TABS */}
-      <nav style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-        <button
-          style={{ background: "none", border: "none", fontSize: "14px", fontWeight: "600", color: activeTab === "home" ? "#0d9488" : "#64748b", borderBottom: activeTab === "home" ? "2px solid #0d9488" : "none", cursor: "pointer", padding: "6px 2px" }}
-          onClick={() => setActiveTab("home")}
-        >
-          Home
-        </button>
-
-        <button
-          style={{ background: "none", border: "none", fontSize: "14px", fontWeight: "600", color: activeTab === "portal" ? "#0d9488" : "#64748b", borderBottom: activeTab === "portal" ? "2px solid #0d9488" : "none", cursor: "pointer", padding: "6px 2px" }}
-          onClick={() => {
-            if (isLoggedIn) setActiveTab("portal");
-            else onOpenAuth("login", "patient");
+      
+      {/* Capsule Navigation */}
+      <nav style={{ display: "flex", gap: "4px", alignItems: "center", background: "#f8fafc", padding: "4px 6px", borderRadius: "9999px", border: "1px solid #e2e8f0" }}>
+        <a 
+          href="#home" 
+          onClick={(e) => handleScrollTo(e, "home")}
+          style={{ 
+            padding: "6px 18px", 
+            borderRadius: "9999px", 
+            background: activeTab === "home" ? "#0d9488" : "transparent", 
+            color: activeTab === "home" ? "#fff" : "#334155", 
+            textDecoration: "none", 
+            fontWeight: "600", 
+            fontSize: "13.5px",
+            transition: "all 0.3s ease"
           }}
         >
-          {userRole === "admin" ? "Hospital Admin" : "Patient Portal"}
-        </button>
+          Home
+        </a>
+
+        {/* Agar login nahi hai tabhi baaki options (Patient Portal, Features, About, Contact) dikhenge */}
+        {!isLoggedIn && (
+          <>
+            <button 
+              onClick={() => onOpenAuth("login", "patient")} 
+              style={{ 
+                padding: "6px 18px", 
+                borderRadius: "9999px", 
+                background: "transparent", 
+                color: "#334155", 
+                border: "none", 
+                fontWeight: "600", 
+                cursor: "pointer", 
+                fontSize: "13.5px",
+                transition: "all 0.3s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#ccfbf1";
+                e.target.style.color = "#0f766e";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "transparent";
+                e.target.style.color = "#334155";
+              }}
+            >
+              Patient Portal
+            </button>
+
+            <a 
+              href="#features" 
+              onClick={(e) => handleScrollTo(e, "features")}
+              style={{ 
+                padding: "6px 18px", 
+                borderRadius: "9999px", 
+                background: "transparent", 
+                color: "#334155", 
+                textDecoration: "none", 
+                fontWeight: "600", 
+                fontSize: "13.5px",
+                transition: "all 0.3s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#ccfbf1";
+                e.target.style.color = "#0f766e";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "transparent";
+                e.target.style.color = "#334155";
+              }}
+            >
+              Features
+            </a>
+
+            <a 
+              href="#about" 
+              onClick={(e) => handleScrollTo(e, "about")}
+              style={{ 
+                padding: "6px 18px", 
+                borderRadius: "9999px", 
+                background: "transparent", 
+                color: "#334155", 
+                textDecoration: "none", 
+                fontWeight: "600", 
+                fontSize: "13.5px",
+                transition: "all 0.3s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#ccfbf1";
+                e.target.style.color = "#0f766e";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "transparent";
+                e.target.style.color = "#334155";
+              }}
+            >
+              About
+            </a>
+
+            <a 
+              href="#contact" 
+              onClick={(e) => handleScrollTo(e, "contact")}
+              style={{ 
+                padding: "6px 18px", 
+                borderRadius: "9999px", 
+                background: "transparent", 
+                color: "#334155", 
+                textDecoration: "none", 
+                fontWeight: "600", 
+                fontSize: "13.5px",
+                transition: "all 0.3s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#ccfbf1";
+                e.target.style.color = "#0f766e";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "transparent";
+                e.target.style.color = "#334155";
+              }}
+            >
+              Contact
+            </a>
+          </>
+        )}
       </nav>
 
-      {/* USER PILL & LOGOUT */}
-      <div>
+      {/* Auth / User Profile Actions */}
+      <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
         {isLoggedIn ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{ background: "#f1f5f9", padding: "6px 14px", borderRadius: "999px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
-              <FaUserCircle color="#0d9488" size={16} />
-              <span>{userName}</span>
-              <span style={{ background: userRole === "admin" ? "#6366f1" : "#0d9488", color: "#ffffff", fontSize: "9px", padding: "2px 6px", borderRadius: "4px", textTransform: "uppercase" }}>{userRole}</span>
-            </div>
-            <button onClick={onLogout} style={{ background: "#fee2e2", color: "#ef4444", border: "none", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Logout">
-              <FaSignOutAlt />
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", background: "#f8fafc", padding: "6px 14px", borderRadius: "999px", border: "1px solid #e2e8f0" }}>
+            <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#0f172a" }}>
+              Hi, {userName}
+            </span>
+            {/* Teal Green Logout Button */}
+            <button
+              onClick={onLogout}
+              style={{
+                padding: "6px 16px",
+                background: "#ccfbf1",
+                color: "#0f766e",
+                border: "1px solid #99f6e4",
+                borderRadius: "9999px",
+                fontWeight: "700",
+                cursor: "pointer",
+                fontSize: "13px",
+                boxShadow: "0 2px 6px rgba(13, 148, 136, 0.15)",
+                transition: "all 0.2s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#0d9488";
+                e.target.style.color = "#ffffff";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "#ccfbf1";
+                e.target.style.color = "#0f766e";
+              }}
+            >
+              Logout
             </button>
           </div>
         ) : (
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button style={{ background: "#ffffff", color: "#0d9488", border: "1.5px solid #0d9488", padding: "8px 16px", borderRadius: "999px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }} onClick={() => onOpenAuth("register", "patient")}>
+          <>
+            <button
+              onClick={() => onOpenAuth("register", "patient")}
+              style={{
+                padding: "8px 20px",
+                background: "#ccfbf1",
+                color: "#0f766e",
+                border: "1px solid #99f6e4",
+                borderRadius: "9999px",
+                fontWeight: "700",
+                cursor: "pointer",
+                fontSize: "13px",
+                transition: "all 0.2s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#99f6e4";
+                e.target.style.transform = "scale(1.05)";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "#ccfbf1";
+                e.target.style.transform = "scale(1)";
+              }}
+            >
               Register
             </button>
-            <button style={{ background: "#0d9488", color: "#ffffff", border: "none", padding: "9px 20px", borderRadius: "999px", fontWeight: "600", cursor: "pointer", fontSize: "13px", display: "inline-flex", alignItems: "center", gap: "6px" }} onClick={() => onOpenAuth("login", "patient")}>
-              <FaSignInAlt /> Login
+
+            <button
+              onClick={() => onOpenAuth("login", "patient")}
+              style={{
+                padding: "8px 20px",
+                background: "#0d9488",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "9999px",
+                fontWeight: "700",
+                cursor: "pointer",
+                fontSize: "13px",
+                transition: "all 0.2s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#0f766e";
+                e.target.style.transform = "scale(1.05)";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "#0d9488";
+                e.target.style.transform = "scale(1)";
+              }}
+            >
+              Login
             </button>
-          </div>
+          </>
         )}
       </div>
     </header>

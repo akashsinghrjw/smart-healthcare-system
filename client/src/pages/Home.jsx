@@ -46,7 +46,7 @@ export default function Home({
     <div style={{ backgroundColor: "#f8fafc", color: "#0f172a", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
       
       {/* 1. HERO SECTION */}
-      <section style={{ maxWidth: "1240px", margin: "0 auto", padding: "60px 24px 50px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "40px", alignItems: "center" }}>
+      <section id="home" style={{ maxWidth: "1240px", margin: "0 auto", padding: "60px 24px 50px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "40px", alignItems: "center" }}>
         <div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f0fdfa", border: "1px solid #ccfbf1", padding: "6px 14px", borderRadius: "999px", color: "#0d9488", fontSize: "12px", fontWeight: "700", marginBottom: "18px" }}>
             <FaShieldAlt /> ADVANCED CLINICAL AI PORTAL
@@ -130,8 +130,8 @@ export default function Home({
         </div>
       </section>
 
-      {/* 2. CORE FEATURES (VIBRANT & COLOURFUL UI) */}
-      <section style={{ maxWidth: "1240px", margin: "0 auto", padding: "40px 24px" }}>
+      {/* 2. CORE FEATURES SECTION (id="features") */}
+      <section id="features" style={{ maxWidth: "1240px", margin: "0 auto", padding: "40px 24px" }}>
         <div style={{ textAlign: "center", marginBottom: "38px" }}>
           <div style={{ display: "inline-block", background: "#f0fdfa", color: "#0d9488", padding: "4px 14px", borderRadius: "999px", fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
             Ecosystem Highlights
@@ -146,17 +146,8 @@ export default function Home({
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "26px" }}>
           
-          {/* CARD 1: AI SYMPTOM TRIAGE (EMERALD / TEAL GRADIENT) */}
-          <div style={{
-            background: "linear-gradient(180deg, #f0fdfa 0%, #ffffff 60%)",
-            border: "1.5px solid #ccfbf1",
-            borderRadius: "20px",
-            padding: "28px",
-            boxShadow: "0 10px 25px -5px rgba(13, 148, 136, 0.08)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between"
-          }}>
+          {/* CARD 1 */}
+          <div style={{ background: "linear-gradient(180deg, #f0fdfa 0%, #ffffff 60%)", border: "1.5px solid #ccfbf1", borderRadius: "20px", padding: "28px", boxShadow: "0 10px 25px -5px rgba(13, 148, 136, 0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
                 <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "linear-gradient(135deg, #0d9488 0%, #059669 100%)", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 16px rgba(13, 148, 136, 0.25)" }}>
@@ -166,7 +157,6 @@ export default function Home({
                   AI-POWERED
                 </span>
               </div>
-              
               <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: "0 0 10px" }}>
                 AI Symptom Triage Desk
               </h3>
@@ -174,24 +164,14 @@ export default function Home({
                 Natural language symptom evaluation using Google Gemini 1.5 Flash. Instantly categorizes clinical urgency levels and flags emergency risks.
               </p>
             </div>
-
             <div style={{ background: "#ffffff", border: "1px solid #ccfbf1", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }}></span>
               <span style={{ fontSize: "12.5px", color: "#0f766e", fontWeight: "700" }}>Gemini 1.5 Flash Reasoning</span>
             </div>
           </div>
 
-          {/* CARD 2: MEDICAL RECORDS VAULT (SKY / BLUE GRADIENT) */}
-          <div style={{
-            background: "linear-gradient(180deg, #f0f9ff 0%, #ffffff 60%)",
-            border: "1.5px solid #bae6fd",
-            borderRadius: "20px",
-            padding: "28px",
-            boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between"
-          }}>
+          {/* CARD 2 */}
+          <div style={{ background: "linear-gradient(180deg, #f0f9ff 0%, #ffffff 60%)", border: "1.5px solid #bae6fd", borderRadius: "20px", padding: "28px", boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
                 <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 16px rgba(2, 132, 199, 0.25)" }}>
@@ -201,7 +181,6 @@ export default function Home({
                   ENCRYPTED
                 </span>
               </div>
-              
               <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: "0 0 10px" }}>
                 Encrypted Records Vault
               </h3>
@@ -209,24 +188,14 @@ export default function Home({
                 Centralized vault for lab reports, doctor prescriptions, and discharge summaries with immediate in-browser document preview and export.
               </p>
             </div>
-
             <div style={{ background: "#ffffff", border: "1px solid #bae6fd", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#0284c7" }}></span>
               <span style={{ fontSize: "12.5px", color: "#0369a1", fontWeight: "700" }}>Cloud MongoDB Atlas Sync</span>
             </div>
           </div>
 
-          {/* CARD 3: SMART MEDICATION TRACKER (AMBER / GOLD GRADIENT) */}
-          <div style={{
-            background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 60%)",
-            border: "1.5px solid #fde68a",
-            borderRadius: "20px",
-            padding: "28px",
-            boxShadow: "0 10px 25px -5px rgba(217, 119, 6, 0.08)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between"
-          }}>
+          {/* CARD 3 */}
+          <div style={{ background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 60%)", border: "1.5px solid #fde68a", borderRadius: "20px", padding: "28px", boxShadow: "0 10px 25px -5px rgba(217, 119, 6, 0.08)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
                 <div style={{ width: "52px", height: "52px", borderRadius: "14px", background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 16px rgba(217, 119, 6, 0.25)" }}>
@@ -236,7 +205,6 @@ export default function Home({
                   ADHERENCE
                 </span>
               </div>
-              
               <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: "0 0 10px" }}>
                 Smart Medication Tracker
               </h3>
@@ -244,7 +212,6 @@ export default function Home({
                 Prescription dose scheduler with routine reminders, morning/night intervals, and interactive Taken/Pending adherence checklists.
               </p>
             </div>
-
             <div style={{ background: "#ffffff", border: "1px solid #fde68a", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b" }}></span>
               <span style={{ fontSize: "12.5px", color: "#b45309", fontWeight: "700" }}>Daily Compliance Tracking</span>
@@ -254,22 +221,25 @@ export default function Home({
         </div>
       </section>
 
-      {/* 3. HOW THE PLATFORM WORKS */}
-      <section style={{ background: "#ffffff", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", padding: "50px 24px" }}>
+      {/* 3. HOW THE PLATFORM WORKS / ABOUT SECTION (id="about") */}
+      <section id="about" style={{ background: "#ffffff", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", padding: "50px 24px" }}>
         <div style={{ maxWidth: "1240px", margin: "0 auto", textAlign: "center" }}>
+          <div style={{ display: "inline-block", background: "#ccfbf1", color: "#0f766e", padding: "4px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "700", marginBottom: "10px" }}>
+            PROJECT INFORMATION & WORKFLOW
+          </div>
           <h2 style={{ fontSize: "26px", fontWeight: "800", margin: "0 0 30px", color: "#0f172a" }}>How The Platform Works</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "28px" }}>
-            <div>
+            <div style={{ textAlign: "left", background: "#f8fafc", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
               <div style={stepCircleStyle}>1</div>
               <h4 style={{ margin: "14px 0 6px", fontSize: "16px", color: "#0f172a" }}>Register & Create Profile</h4>
               <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>Sign up securely and modify your physical bio data parameters in-app.</p>
             </div>
-            <div>
+            <div style={{ textAlign: "left", background: "#f8fafc", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
               <div style={stepCircleStyle}>2</div>
               <h4 style={{ margin: "14px 0 6px", fontSize: "16px", color: "#0f172a" }}>Upload Docs & Setup Doses</h4>
               <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>Upload diagnosis files in vault and check everyday medicine timers.</p>
             </div>
-            <div>
+            <div style={{ textAlign: "left", background: "#f8fafc", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
               <div style={stepCircleStyle}>3</div>
               <h4 style={{ margin: "14px 0 6px", fontSize: "16px", color: "#0f172a" }}>Interact With Clinical AI</h4>
               <p style={{ color: "#64748b", fontSize: "13px", margin: 0 }}>Obtain reliable triage suggestions based on symptom prompts instantly.</p>
@@ -295,8 +265,8 @@ export default function Home({
         </div>
       </section>
 
-      {/* 5. SUPPORT & GRIEVANCE DESK */}
-      <section style={{ maxWidth: "1240px", margin: "20px auto 60px", padding: "0 24px" }}>
+      {/* 5. SUPPORT & GRIEVANCE DESK / CONTACT SECTION (id="contact") */}
+      <section id="contact" style={{ maxWidth: "1240px", margin: "20px auto 60px", padding: "0 24px" }}>
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "30px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "30px" }}>
           <div>
             <span style={{ color: "#0d9488", fontWeight: "700", fontSize: "12px" }}>SUPPORT & GRIEVANCE DESK</span>

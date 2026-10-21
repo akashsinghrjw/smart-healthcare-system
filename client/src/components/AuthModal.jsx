@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { api } from "../utils/api";
 import { FaTimes } from "react-icons/fa";
 
+// Authorized Project Owner Credentials
+const MASTER_ADMIN_EMAIL = "admin@hospital.com";
+const MASTER_ADMIN_PASS = "admin123";
+
 export default function AuthModal({
   showAuthModal,
   setShowAuthModal,
@@ -10,7 +14,8 @@ export default function AuthModal({
   authRole = "patient",
   onLoginSuccess
 }) {
-  const [isLogin, setIsLogin] = useState(authMode === "login");
+  const isAdminModal = authRole === "admin";
+  const [isLogin, setIsLogin] = useState(isAdminModal ? true : authMode === "login");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,8 +26,12 @@ export default function AuthModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setIsLogin(authMode === "login");
-  }, [authMode]);
+    if (isAdminModal) {
+      setIsLogin(true);
+    } else {
+      setIsLogin(authMode === "login");
+    }
+  }, [authMode, isAdminModal]);
 
   if (!showAuthModal) return null;
 
@@ -41,38 +50,65 @@ export default function AuthModal({
     setLoading(true);
     setError("");
 
+    const inputEmail = formData.email.trim().toLowerCase();
+    const inputPass = formData.password.trim();
+
+    // 1. MASTER ADMIN DIRECT LOGIN CHECK
+    if (isAdminModal) {
+      if (inputEmail === MASTER_ADMIN_EMAIL && inputPass === MASTER_ADMIN_PASS) {
+        const adminToken = "authorized_admin_token_" + Date.now();
+        const adminName = "Hospital Administrator";
+
+        localStorage.setItem("token", adminToken);
+        localStorage.setItem("userRole", "admin");
+        localStorage.setItem("userName", adminName);
+        localStorage.setItem("userEmail", MASTER_ADMIN_EMAIL);
+        localStorage.setItem("userPhone", "9876543210");
+
+        if (onLoginSuccess) {
+          onLoginSuccess("admin", adminName, MASTER_ADMIN_EMAIL, "9876543210");
+        }
+
+        setLoading(false);
+        handleClose();
+        return;
+      } else {
+        setLoading(false);
+        setError("Invalid Admin Credentials! Kripya sahi email aur password bharein.");
+        return;
+      }
+    }
+
+    // 2. REGULAR PATIENT LOGIN / REGISTER
     try {
       let res;
       if (isLogin) {
-        // Backend API Login
         res = await api.login({
-          email: formData.email.trim(),
-          password: formData.password
+          email: inputEmail,
+          password: inputPass
         });
       } else {
-        // Backend API Register
         res = await api.register({
           name: formData.name.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
+          email: inputEmail,
+          password: inputPass,
           phone: formData.phone.trim(),
-          role: authRole || "patient"
+          role: "patient"
         });
       }
 
       if (res && res.token) {
-        // Save token and session
         localStorage.setItem("token", res.token);
-        localStorage.setItem("userRole", res.role || authRole || "patient");
+        localStorage.setItem("userRole", "patient");
         localStorage.setItem("userName", res.name || formData.name || "Patient");
-        localStorage.setItem("userEmail", res.email || formData.email);
+        localStorage.setItem("userEmail", res.email || inputEmail);
         localStorage.setItem("userPhone", formData.phone || "");
 
         if (onLoginSuccess) {
           onLoginSuccess(
-            res.role || authRole || "patient",
+            "patient",
             res.name || formData.name || "Patient",
-            res.email || formData.email,
+            res.email || inputEmail,
             formData.phone || ""
           );
         }
@@ -82,7 +118,7 @@ export default function AuthModal({
         throw new Error("Authentication failed. Invalid response from server.");
       }
     } catch (err) {
-      setError(err.message || "Failed to connect to database");
+      setError(err.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -117,22 +153,16 @@ export default function AuthModal({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div>
             <h2 style={{ margin: 0, color: "#0f172a", fontSize: "20px", fontWeight: "800" }}>
-              {isLogin ? "Welcome Back" : "Create Patient Account"}
+              {isAdminModal ? "Admin Console Login" : (isLogin ? "Welcome Back" : "Create Patient Account")}
             </h2>
             <small style={{ color: "#0d9488", fontWeight: "700", textTransform: "uppercase", fontSize: "11px" }}>
-              {authRole === "admin" ? "Hospital Admin Portal" : "Smart Healthcare Portal"}
+              {isAdminModal ? "Hospital Admin Portal" : "Smart Healthcare Portal"}
             </small>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "18px",
-              cursor: "pointer",
-              color: "#64748b"
-            }}
+            style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "#64748b" }}
           >
             <FaTimes />
           </button>
@@ -145,7 +175,7 @@ export default function AuthModal({
         )}
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {!isLogin && (
+          {!isLogin && !isAdminModal && (
             <>
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>Full Name</label>
@@ -174,11 +204,13 @@ export default function AuthModal({
           )}
 
           <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>Email Address</label>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "5px" }}>
+              {isAdminModal ? "Authorized Admin Email" : "Email Address"}
+            </label>
             <input
               type="email"
               name="email"
-              placeholder="example@mail.com"
+              placeholder={isAdminModal ? "admin@hospital.com" : "example@mail.com"}
               value={formData.email}
               onChange={handleChange}
               required
@@ -216,24 +248,26 @@ export default function AuthModal({
               marginTop: "8px"
             }}
           >
-            {loading ? (isLogin ? "Signing In..." : "Creating Account...") : isLogin ? "Sign In" : "Register Account"}
+            {loading ? "Authenticating..." : isAdminModal ? "Secure Admin Sign In" : isLogin ? "Sign In" : "Register Account"}
           </button>
         </form>
 
-        <div style={{ textAlign: "center", marginTop: "16px", fontSize: "13px", color: "#64748b" }}>
-          {isLogin ? "Don't have an account? " : "Already registered? "}
-          <button
-            type="button"
-            onClick={() => {
-              setIsLogin(!isLogin);
-              if (setAuthMode) setAuthMode(isLogin ? "register" : "login");
-              setError("");
-            }}
-            style={{ background: "none", border: "none", color: "#0d9488", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
-          >
-            {isLogin ? "Register Now" : "Login Here"}
-          </button>
-        </div>
+        {!isAdminModal && (
+          <div style={{ textAlign: "center", marginTop: "16px", fontSize: "13px", color: "#64748b" }}>
+            {isLogin ? "Don't have an account? " : "Already registered? "}
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                if (setAuthMode) setAuthMode(isLogin ? "register" : "login");
+                setError("");
+              }}
+              style={{ background: "none", border: "none", color: "#0d9488", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
+            >
+              {isLogin ? "Register Now" : "Login Here"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

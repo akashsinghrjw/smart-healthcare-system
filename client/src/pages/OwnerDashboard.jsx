@@ -224,7 +224,7 @@ export default function OwnerDashboard({
             <div key={p?.id || Math.random()} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px" }}>
               <div>
                 <strong>{p?.name || "Patient"}</strong> ({p?.phone || "N/A"})
-                <small style={{ display: "block", color: "#64748b", marginTop: "2px" }}>{p?.email || "No Email"} • Added: {p?.registeredAt || "N/A"}</small>
+                <small style={{ display: "block", color: "#64748b", marginTop: "2px" }}>{p?.email || "No Email"} | Added: {p?.registeredAt || "N/A"}</small>
               </div>
 
               <div style={{ display: "flex", gap: "8px" }}>
@@ -272,12 +272,12 @@ export default function OwnerDashboard({
                       fontSize: "11px",
                       fontWeight: "700"
                     }}>
-                      {ticket?.ticketId} • {ticket?.status === "RESOLVED" ? "SOLVED" : "PENDING"}
+                      {ticket?.ticketId} | {ticket?.status === "RESOLVED" ? "SOLVED" : "PENDING"}
                     </span>
                     <strong style={{ display: "block", fontSize: "14px", color: "#0f172a", marginTop: "4px" }}>
                       {ticket?.name}
                     </strong>
-                    <small style={{ color: "#64748b" }}>{ticket?.email} • {ticket?.date}</small>
+                    <small style={{ color: "#64748b" }}>{ticket?.email} | {ticket?.date}</small>
                   </div>
 
                   <button onClick={() => handleDeleteTicket(ticket?.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
@@ -294,12 +294,31 @@ export default function OwnerDashboard({
                     <strong style={{ color: "#166534" }}>Sent:</strong> {ticket?.adminReply}
                   </div>
                 ) : (
-                  <button
-                    style={{ width: "100%", background: "linear-gradient(135deg, #0d9488 0%, #059669 100%)", color: "#ffffff", border: "none", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                    onClick={() => { setReplyingTicket(ticket); setAdminReplyText(""); }}
-                  >
-                    <FaReply /> Reply & Mark as Solved
-                  </button>
+                  <div>
+                    {replyingTicket?.id === ticket?.id ? (
+                      <form onSubmit={handleResolveSubmit} style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <textarea
+                          rows="2"
+                          placeholder="Type reply to resolve query..."
+                          value={adminReplyText}
+                          onChange={(e) => setAdminReplyText(e.target.value)}
+                          required
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "12px", boxSizing: "border-box" }}
+                        />
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button type="submit" style={{ flex: 1, background: "#0d9488", color: "#fff", border: "none", padding: "6px", borderRadius: "6px", fontWeight: "700", fontSize: "11.5px", cursor: "pointer" }}>Send Reply</button>
+                          <button type="button" onClick={() => setReplyingTicket(null)} style={{ background: "#e2e8f0", border: "none", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", cursor: "pointer" }}>Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <button
+                        style={{ width: "100%", background: "linear-gradient(135deg, #0d9488 0%, #059669 100%)", color: "#ffffff", border: "none", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                        onClick={() => { setReplyingTicket(ticket); setAdminReplyText(""); }}
+                      >
+                        <FaReply /> Reply & Mark as Solved
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -314,7 +333,7 @@ export default function OwnerDashboard({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
               <div>
                 <h3 style={{ fontSize: "18px", margin: 0 }}>Patient Dossier: {selectedPatient?.name}</h3>
-                <small style={{ color: "#64748b" }}>{selectedPatient?.email} • {selectedPatient?.phone}</small>
+                <small style={{ color: "#64748b" }}>{selectedPatient?.email} | {selectedPatient?.phone}</small>
               </div>
               <button onClick={() => setSelectedPatient(null)} style={{ border: "none", background: "none", fontSize: "18px", cursor: "pointer" }}><FaTimes /></button>
             </div>
@@ -357,7 +376,7 @@ export default function OwnerDashboard({
                     <div key={t?.id} style={{ fontSize: "12px", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", marginBottom: "6px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <strong>Query: "{t?.query}"</strong>
-                        <small style={{ display: "block", color: "#0d9488", marginTop: "2px" }}>{t?.condition} • {t?.date} ({t?.time})</small>
+                        <small style={{ display: "block", color: "#0d9488", marginTop: "2px" }}>{t?.condition} | {t?.date} ({t?.time})</small>
                       </div>
                       <button
                         onClick={() => handleDeleteTriageLog(t?.id)}
@@ -377,7 +396,7 @@ export default function OwnerDashboard({
               <div style={{ maxHeight: "90px", overflowY: "auto" }}>
                 {selMeds.length === 0 ? <p style={{ fontSize: "12px", color: "#94a3b8" }}>No medicines.</p> : selMeds.map((m) => (
                   <div key={m?.id} style={{ fontSize: "12px", background: "#f8fafc", padding: "4px 8px", marginBottom: "4px", borderRadius: "4px" }}>
-                    {m?.name} ({m?.exactTime} - {m?.days})
+                    {m?.name} ({m?.exactTime} | {m?.days})
                   </div>
                 ))}
               </div>
@@ -451,7 +470,7 @@ export default function OwnerDashboard({
               )))}
               {adminModal === "meds" && (medicines.length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : medicines.map((m) => (
                 <div key={m?.id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
-                  <strong>{m?.name}</strong><small style={{ display: "block", color: "#ea580c" }}>{m?.patientName} - {m?.exactTime} ({m?.days})</small>
+                  <strong>{m?.name}</strong><small style={{ display: "block", color: "#ea580c" }}>{m?.patientName} | {m?.exactTime} ({m?.days})</small>
                 </div>
               )))}
               {adminModal === "triage" && (triageLogs.length === 0 ? <p style={{ color: "#94a3b8" }}>No AI queries found.</p> : triageLogs.map((t) => (
@@ -459,7 +478,7 @@ export default function OwnerDashboard({
                   <div>
                     <strong>Query: "{t?.query}"</strong>
                     <small style={{ display: "block", color: "#0d9488", margin: "2px 0" }}>Patient: {t?.patientName} ({t?.patientEmail})</small>
-                    <small style={{ color: "#64748b" }}>{t?.condition} • {t?.date} ({t?.time})</small>
+                    <small style={{ color: "#64748b" }}>{t?.condition} | {t?.date} ({t?.time})</small>
                   </div>
                   <button
                     onClick={() => handleDeleteTriageLog(t?.id)}
