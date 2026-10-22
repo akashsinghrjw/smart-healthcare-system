@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 
@@ -6,7 +5,6 @@ const TriageLog = require('../models/TriageLog');
 const { protect } = require('../middleware/authMiddleware');
 
 // POST /api/triage/analyze
-// Analyze symptoms and save the result in MongoDB.
 router.post('/analyze', protect, async (req, res) => {
   try {
     const { query } = req.body || {};
@@ -20,12 +18,12 @@ router.post('/analyze', protect, async (req, res) => {
     const symptoms = query.trim();
     const apiKey = process.env.GEMINI_API_KEY;
     let guidance = '';
-    let source = 'Fallback Guidance';
+    let source = 'Gemini AI via Backend';
 
     if (apiKey) {
       try {
         const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
           {
             method: 'POST',
             headers: {
@@ -60,12 +58,8 @@ router.post('/analyze', protect, async (req, res) => {
               ?.map((part) => part.text || '')
               .join('\n')
               .trim() || '';
-
-          if (guidance) {
-            source = 'Gemini AI via Backend';
-          }
         } else {
-          console.error('Gemini API response:', data.error?.message);
+          console.error('Gemini API response error:', data.error?.message || data);
         }
       } catch (error) {
         console.error('Gemini request failed:', error.message);
@@ -75,9 +69,11 @@ router.post('/analyze', protect, async (req, res) => {
     if (!guidance) {
       guidance =
         'AI analysis is temporarily unavailable. Please consult a qualified healthcare professional. Seek urgent medical attention for severe or rapidly worsening symptoms.';
+      source = 'Fallback Guidance';
     }
 
-    const log = await TriageLog.create({
+    // Safe instance creation and save (Avoids create is not a function error)
+    const newLog = new TriageLog({
       patientEmail: req.user.email || '',
       patientName: req.user.name || 'Patient',
       query: symptoms,
@@ -86,13 +82,14 @@ router.post('/analyze', protect, async (req, res) => {
       source,
     });
 
+    const savedLog = await newLog.save();
+
     return res.status(201).json({
       analysis: guidance,
-      logId: log._id,
+      logId: savedLog._id,
     });
   } catch (error) {
     console.error('Triage analysis error:', error);
-
     return res.status(500).json({
       message: 'Unable to analyze symptoms or save the result.',
     });
@@ -100,11 +97,10 @@ router.post('/analyze', protect, async (req, res) => {
 });
 
 // GET /api/triage/history
-// Admin sees all logs; patients see only their own.
 router.get('/history', protect, async (req, res) => {
   try {
     const filter =
-      req.user.role === 'admin'
+      String(req.user.role || '').toLowerCase() === 'admin'
         ? {}
         : { patientEmail: req.user.email };
 
@@ -115,7 +111,6 @@ router.get('/history', protect, async (req, res) => {
     return res.status(200).json(logs);
   } catch (error) {
     console.error('Triage history error:', error);
-
     return res.status(500).json({
       message: 'Unable to load AI history.',
     });
@@ -123,10 +118,9 @@ router.get('/history', protect, async (req, res) => {
 });
 
 // DELETE /api/triage/history/:id
-// Only admins can delete AI history.
 router.delete('/history/:id', protect, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (String(req.user.role || '').toLowerCase() !== 'admin') {
       return res.status(403).json({
         message: 'Admin access required.',
       });
@@ -145,7 +139,6 @@ router.delete('/history/:id', protect, async (req, res) => {
     });
   } catch (error) {
     console.error('Delete triage log error:', error);
-
     return res.status(500).json({
       message: 'Unable to delete AI log.',
     });
