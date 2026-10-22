@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import AuthModal from "../components/AuthModal";
+import { api } from "../utils/api";
 import {
   FaRobot,
   FaFolderOpen,
@@ -27,19 +28,71 @@ export default function Home({
   const [trackTicketId, setTrackTicketId] = useState("");
   const [ticketStatusMsg, setTicketStatusMsg] = useState("");
 
-  const handleSupportSubmit = (e) => {
+  const handleSupportSubmit = async (e) => {
     e.preventDefault();
     if (!supportName || !supportEmail || !supportQuery) return;
+
     const generatedId = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
-    alert(`Aapki query submit ho gayi hai!\nTicket ID: ${generatedId}`);
+
+    const newTicket = {
+      id: String(Date.now()),
+      ticketId: generatedId,
+      name: supportName.trim(),
+      email: supportEmail.trim(),
+      msg: supportQuery.trim(),
+      status: "PENDING",
+      adminReply: "",
+      date: new Date().toLocaleDateString()
+    };
+
+    // 1. Send to MongoDB Backend API
+    try {
+      await api.createTicket(newTicket);
+    } catch (err) {
+      console.warn("Backend ticket save fallback to local:", err.message);
+    }
+
+    // 2. Save in LocalStorage so Admin Dashboard shows it instantly
+    const existing = JSON.parse(localStorage.getItem("support_tickets_list") || "[]");
+    const updated = [newTicket, ...existing];
+    localStorage.setItem("support_tickets_list", JSON.stringify(updated));
+
+    alert(`Aapki Support Query submit ho gayi hai!\nTicket ID: ${generatedId}`);
     setSupportName("");
     setSupportEmail("");
     setSupportQuery("");
   };
 
-  const handleTrackTicket = () => {
+  const handleTrackTicket = async () => {
     if (!trackTicketId.trim()) return;
-    setTicketStatusMsg(`Ticket [${trackTicketId}]: Active & In Review by admin support team.`);
+    const cleanId = trackTicketId.trim().toUpperCase();
+
+    try {
+      const res = await api.trackTicket(cleanId);
+      if (res) {
+        if (res.status === "RESOLVED") {
+          setTicketStatusMsg(`Ticket [${cleanId}] SOLVED ✅ | Admin Reply: "${res.adminReply}"`);
+        } else {
+          setTicketStatusMsg(`Ticket [${cleanId}] PENDING ⏳ | Under review by Hospital Admin.`);
+        }
+        return;
+      }
+    } catch (err) {
+      // Fallback to local storage check
+    }
+
+    const existingTickets = JSON.parse(localStorage.getItem("support_tickets_list") || "[]");
+    const found = existingTickets.find((t) => (t.ticketId || "").toUpperCase() === cleanId);
+
+    if (found) {
+      if (found.status === "RESOLVED") {
+        setTicketStatusMsg(`Ticket [${cleanId}] SOLVED ✅ | Admin Reply: "${found.adminReply}"`);
+      } else {
+        setTicketStatusMsg(`Ticket [${cleanId}] PENDING ⏳ | Under review by Hospital Admin.`);
+      }
+    } else {
+      setTicketStatusMsg(`Ticket [${cleanId}]: Invalid Ticket ID or query not found.`);
+    }
   };
 
   return (
@@ -130,7 +183,7 @@ export default function Home({
         </div>
       </section>
 
-      {/* 2. CORE FEATURES SECTION (id="features") */}
+      {/* 2. CORE FEATURES SECTION */}
       <section id="features" style={{ maxWidth: "1240px", margin: "0 auto", padding: "40px 24px" }}>
         <div style={{ textAlign: "center", marginBottom: "38px" }}>
           <div style={{ display: "inline-block", background: "#f0fdfa", color: "#0d9488", padding: "4px 14px", borderRadius: "999px", fontSize: "12px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
@@ -221,7 +274,7 @@ export default function Home({
         </div>
       </section>
 
-      {/* 3. HOW THE PLATFORM WORKS / ABOUT SECTION (id="about") */}
+      {/* 3. HOW THE PLATFORM WORKS */}
       <section id="about" style={{ background: "#ffffff", borderTop: "1px solid #e2e8f0", borderBottom: "1px solid #e2e8f0", padding: "50px 24px" }}>
         <div style={{ maxWidth: "1240px", margin: "0 auto", textAlign: "center" }}>
           <div style={{ display: "inline-block", background: "#ccfbf1", color: "#0f766e", padding: "4px 12px", borderRadius: "20px", fontSize: "11px", fontWeight: "700", marginBottom: "10px" }}>
@@ -265,7 +318,7 @@ export default function Home({
         </div>
       </section>
 
-      {/* 5. SUPPORT & GRIEVANCE DESK / CONTACT SECTION (id="contact") */}
+      {/* 5. SUPPORT & GRIEVANCE DESK */}
       <section id="contact" style={{ maxWidth: "1240px", margin: "20px auto 60px", padding: "0 24px" }}>
         <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "30px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "30px" }}>
           <div>

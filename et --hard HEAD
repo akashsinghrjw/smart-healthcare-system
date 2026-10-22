@@ -1,0 +1,16 @@
+[33m08886be[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: add 6s hard timeout to prevent analyzing freeze
+[33m362b3a5[m fix: switch to gemini-2.0-flash and add direct v1 fallback
+[33mf533ce8[m fix: resolve 404 model not found by using current gemini model aliases
+[33mb8510ce[m fix: official sdk direct integration with clear error reporting
+[33mbe09ced[m fix: direct dynamic gemini responses and robust live stream
+[33md9aa5ec[m fix: pass AQ key via x-goog-api-key header for live gemini responses
+[33m618662e[m fix: use direct google generative ai v1beta REST endpoint for new api key format
+[33mea0dc03[m fix: add @google/generative-ai dependency to server package.json
+[33m0d2eb61[m security: update gitignore and permanently remove env files from tracking
+[33m6d34645[m fix: resolve 502 bad gateway and configure robust gemini triage
+[33m3cc1e77[m fix: update auth loading button text
+[33mfe04262[m feat: add delete account route and sync deletion with MongoDB
+[33m2c0a533[m feat: add root README documentation and complete MERN setup
+[33m4d95a6b[m Configure root gitignore to exclude dependencies and environment files
+[33m214f20a[m Untrack server node_modules
+[33mc5e4b43[m Initial commit - Smart Healthcare System setup

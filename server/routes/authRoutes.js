@@ -1,217 +1,189 @@
 
-const express = require('express');
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+
+const User = require("../models/User");
+const { protect } = require("../middleware/authMiddleware");
+
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 
-const User = require('../models/User');
-const MedicalRecord = require('../models/MedicalRecord');
-const Medication = require('../models/Medication');
-const { protect } = require('../middleware/authMiddleware');
-
-// Generate JWT Token
 const generateToken = (id) => {
-  return jwt.sign(
-    { id },
-    process.env.JWT_SECRET || 'secretKey',
-    { expiresIn: '30d' }
-  );
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured on the server.");
+  }
+
+  return jwt.sign({ id }, secret, { expiresIn: "30d" });
 };
 
-// 1. User Registration Route
-router.post('/register', async (req, res) => {
+// Register a patient account.
+router.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone } = req.body || {};
 
-    if (!email || !password) {
+    if (!name || !email || !password) {
       return res.status(400).json({
-        message: 'Email and password are required',
+        message: "Name, email and password are required.",
       });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
-    const userExists = await User.findOne({
-      email: cleanEmail,
-    });
-
-    if (userExists) {
-      return res.status(400).json({
-        message: 'User already exists',
+    if (existingUser) {
+      return res.status(409).json({
+        message: "An account with this email already exists.",
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Public registration always creates a patient account.
-    // Admin role cannot be assigned through public registration.
     const user = await User.create({
-      name: name ? name.trim() : cleanEmail.split('@')[0],
-      email: cleanEmail,
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
-      role: 'patient',
+      phone: phone || "",
+      role: "patient",
     });
 
     return res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       createdAt: user.createdAt,
-      token: generateToken(user._id),
+      token: generateToken(user._id.toString()),
     });
   } catch (error) {
-    console.error('Registration error:', error);
-
+    console.error("Registration error:", error.message);
     return res.status(500).json({
-      message: error.message || 'Registration failed',
+      message: "Unable to register account.",
     });
   }
 });
 
-// 2. User Login Route
-router.post('/login', async (req, res) => {
+// Log in patients and administrators using database credentials.
+router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
-    const cleanEmail = (email || '').toLowerCase().trim();
-
-    if (!cleanEmail || !password) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: 'Email and password are required',
+        message: "Email and password are required.",
       });
     }
 
-    const user = await User.findOne({
-      email: cleanEmail,
-    });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return res.status(400).json({
-        message: 'Invalid email or password',
+      return res.status(401).json({
+        message: "Invalid email or password.",
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user.password
+    );
 
-    if (!isMatch) {
-      return res.status(400).json({
-        message: 'Invalid email or password',
+    if (!passwordMatches) {
+      return res.status(401).json({
+        message: "Invalid email or password.",
       });
     }
 
-    return res.status(200).json({
+    return res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      phone: user.phone || "",
       role: user.role,
       createdAt: user.createdAt,
-      token: generateToken(user._id),
+      token: generateToken(user._id.toString()),
     });
   } catch (error) {
-    console.error('Login error:', error);
-
+    console.error("Login error:", error.message);
     return res.status(500).json({
-      message: error.message || 'Login failed',
+      message: "Unable to log in.",
     });
   }
 });
 
-// 3. Get Current User Profile
-router.get('/profile', protect, async (req, res) => {
-  try {
-    return res.status(200).json(req.user);
-  } catch (error) {
-    console.error('Profile error:', error);
-
-    return res.status(500).json({
-      message: 'Failed to fetch profile',
-    });
-  }
+// Get the authenticated user's profile.
+router.get("/profile", protect, async (req, res) => {
+  return res.json(req.user);
 });
 
-// 4. Get All Registered Patients (Admin Only)
-router.get('/patients', protect, async (req, res) => {
+// Get patient accounts. Only administrators can access this route.
+router.get("/patients", protect, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       return res.status(403).json({
-        message: 'Access denied. Admin only.',
+        message: "Admin access required.",
       });
     }
 
-    const patients = await User.find({
-      role: 'patient',
-    })
-      .select('-password')
+    const patients = await User.find({ role: "patient" })
+      .select("-password")
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.status(200).json(patients);
+    return res.json(patients);
   } catch (error) {
-    console.error('Fetch patients error:', error);
-
+    console.error("Fetch patients error:", error.message);
     return res.status(500).json({
-      message: 'Failed to fetch patients',
+      message: "Unable to fetch patients.",
     });
   }
 });
 
-// 5. Update Password Route
-router.put('/update-password', protect, async (req, res) => {
+// Update the authenticated user's password.
+router.put("/update-password", protect, async (req, res) => {
   try {
-    const { newPassword } = req.body;
+    const { newPassword } = req.body || {};
 
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({
-        message: 'Password must be at least 6 characters long',
+        message: "Password must contain at least 6 characters.",
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const user = await User.findById(req.user._id);
 
-    await User.findByIdAndUpdate(req.user._id, {
-      password: hashedPassword,
-    });
+    if (!user) {
+      return res.status(404).json({
+        message: "Account not found.",
+      });
+    }
 
-    return res.status(200).json({
-      message: 'Password successfully updated in MongoDB!',
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    return res.json({
+      message: "Password updated successfully.",
     });
   } catch (error) {
-    console.error('Update password error:', error);
-
+    console.error("Password update error:", error.message);
     return res.status(500).json({
-      message: error.message || 'Password update failed',
+      message: "Unable to update password.",
     });
   }
 });
 
-// 6. Delete Account and Associated Records
-router.delete('/delete-account', protect, async (req, res) => {
+// Delete the currently authenticated user's account.
+router.delete("/delete-account", protect, async (req, res) => {
   try {
-    const userId = req.user._id;
-    const userEmail = req.user.email;
+    await User.findByIdAndDelete(req.user._id);
 
-    await User.findByIdAndDelete(userId);
-
-    await MedicalRecord.deleteMany({
-      patientEmail: userEmail,
-    });
-
-    await Medication.deleteMany({
-      patientEmail: userEmail,
-    });
-
-    return res.status(200).json({
-      message:
-        'Account and associated records deleted permanently from MongoDB',
-    });
+    return res.status(204).send();
   } catch (error) {
-    console.error('Delete account error:', error);
-
+    console.error("Account deletion error:", error.message);
     return res.status(500).json({
-      message: error.message || 'Account deletion failed',
+      message: "Unable to delete account.",
     });
   }
 });
