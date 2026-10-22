@@ -10,6 +10,9 @@ connectDB();
 
 const app = express();
 
+// ✅ FIXED: Trust proxy for Render deployment (Resolves express-rate-limit proxy error)
+app.set('trust proxy', 1);
+
 // Security Middlewares
 app.use(helmet());
 

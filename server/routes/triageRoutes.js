@@ -22,8 +22,9 @@ router.post('/analyze', protect, async (req, res) => {
 
     if (apiKey) {
       try {
+        // ✅ FIXED: Changed model to 'gemini-pro' which is universally supported
         const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
           {
             method: 'POST',
             headers: {
@@ -72,7 +73,7 @@ router.post('/analyze', protect, async (req, res) => {
       source = 'Fallback Guidance';
     }
 
-    // Safe instance creation and save (Avoids create is not a function error)
+    // Safe instance creation and save
     const newLog = new TriageLog({
       patientEmail: req.user.email || '',
       patientName: req.user.name || 'Patient',
