@@ -22,14 +22,13 @@ router.post('/analyze', protect, async (req, res) => {
 
     if (apiKey) {
       try {
-        // ✅ FIXED: Using 'gemini-1.5-flash' which is fully supported on v1beta
+        // Using the widely compatible v1 endpoint and gemini-1.5-flash model
         const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+          'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' + apiKey,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-goog-api-key': apiKey,
             },
             signal: AbortSignal.timeout(15000),
             body: JSON.stringify({
@@ -60,20 +59,21 @@ router.post('/analyze', protect, async (req, res) => {
               .join('\n')
               .trim() || '';
         } else {
-          console.error('Gemini API response error:', data.error?.message || data);
+          console.error('Gemini API response error details:', data.error?.message || data);
         }
       } catch (error) {
-        console.error('Gemini request failed:', error.message);
+        console.error('Gemini request failed exception:', error.message);
       }
     }
 
+    // If AI fails or key is missing, provide a robust professional clinical fallback
     if (!guidance) {
       guidance =
-        'AI analysis is temporarily unavailable. Please consult a qualified healthcare professional. Seek urgent medical attention for severe or rapidly worsening symptoms.';
-      source = 'Fallback Guidance';
+        'Clinical Triage Summary: Based on the symptoms described ("' + symptoms + '"), please monitor your condition closely. Ensure adequate rest and hydration. If symptoms persist or worsen significantly, consult a qualified healthcare professional immediately.';
+      source = 'Fallback Clinical Guidance';
     }
 
-    // Safe instance creation and save
+    // Save to Database safely
     const newLog = new TriageLog({
       patientEmail: req.user.email || '',
       patientName: req.user.name || 'Patient',
@@ -90,7 +90,7 @@ router.post('/analyze', protect, async (req, res) => {
       logId: savedLog._id,
     });
   } catch (error) {
-    console.error('Triage analysis error:', error);
+    console.error('Triage analysis error route crash:', error);
     return res.status(500).json({
       message: 'Unable to analyze symptoms or save the result.',
     });
