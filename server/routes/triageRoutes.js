@@ -22,9 +22,9 @@ router.post('/analyze', protect, async (req, res) => {
 
     if (apiKey) {
       try {
-        // ✅ FIXED: Changed model to 'gemini-pro' which is universally supported
+        // ✅ FIXED: Using 'gemini-1.5-flash' which is fully supported on v1beta
         const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
           {
             method: 'POST',
             headers: {
