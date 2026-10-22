@@ -50,7 +50,6 @@ export const api = {
 
   getProfile: () => request("/api/auth/profile"),
 
-  // Admin: Fetch registered patients from MongoDB
   getPatients: () => request("/api/auth/patients"),
 
   updatePassword: (newPassword) =>
@@ -103,7 +102,13 @@ export const api = {
       }),
     }),
 
-  getTriageHistory: () => request("/api/triage/history"),
+  getTriageHistory: () =>
+    request("/api/triage/history"),
+
+  deleteTriageLog: (id) =>
+    request(`/api/triage/history/${id}`, {
+      method: "DELETE",
+    }),
 
   // Support Tickets
   createTicket: (data) =>
