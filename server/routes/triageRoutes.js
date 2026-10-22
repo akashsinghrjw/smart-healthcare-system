@@ -1,8 +1,18 @@
 const express = require('express');
 const router = express.Router();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const TriageLog = require('../models/TriageLog');
 const { protect } = require('../middleware/authMiddleware');
+
+// Initialize Gemini SDK safely
+const getGeminiModel = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const genAI = new GoogleGenerativeAI(apiKey);
+  // Using official SDK model reference
+  return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+};
 
 // POST /api/triage/analyze
 router.post('/analyze', protect, async (req, res) => {
@@ -16,57 +26,28 @@ router.post('/analyze', protect, async (req, res) => {
     }
 
     const symptoms = query.trim();
-    const apiKey = process.env.GEMINI_API_KEY;
     let guidance = '';
     let source = 'Gemini AI via Backend';
 
-    if (apiKey) {
+    const model = getGeminiModel();
+    if (model) {
       try {
-        // Using the widely compatible v1 endpoint and gemini-1.5-flash model
-        const response = await fetch(
-          'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=' + apiKey,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            signal: AbortSignal.timeout(15000),
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text:
-                        'Provide cautious general health information about these symptoms. ' +
-                        'Explain possible causes, basic self-care and warning signs. ' +
-                        'Do not claim a definitive diagnosis or prescribe medication. ' +
-                        'Advise professional medical care when appropriate.\n\nSymptoms: ' +
-                        symptoms,
-                    },
-                  ],
-                },
-              ],
-            }),
-          }
-        );
+        const prompt =
+          'Provide cautious general health information about these symptoms. ' +
+          'Explain possible causes, basic self-care and warning signs. ' +
+          'Do not claim a definitive diagnosis or prescribe medication. ' +
+          'Advise professional medical care when appropriate.\n\nSymptoms: ' +
+          symptoms;
 
-        const data = await response.json();
-
-        if (response.ok) {
-          guidance =
-            data.candidates?.[0]?.content?.parts
-              ?.map((part) => part.text || '')
-              .join('\n')
-              .trim() || '';
-        } else {
-          console.error('Gemini API response error details:', data.error?.message || data);
-        }
-      } catch (error) {
-        console.error('Gemini request failed exception:', error.message);
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        guidance = response.text().trim();
+      } catch (aiError) {
+        console.error('Gemini SDK generation failed:', aiError.message);
       }
     }
 
-    // If AI fails or key is missing, provide a robust professional clinical fallback
+    // Fallback if AI fails or key is missing
     if (!guidance) {
       guidance =
         'Clinical Triage Summary: Based on the symptoms described ("' + symptoms + '"), please monitor your condition closely. Ensure adequate rest and hydration. If symptoms persist or worsen significantly, consult a qualified healthcare professional immediately.';
@@ -90,7 +71,7 @@ router.post('/analyze', protect, async (req, res) => {
       logId: savedLog._id,
     });
   } catch (error) {
-    console.error('Triage analysis error route crash:', error);
+    console.error('Triage analysis route error:', error);
     return res.status(500).json({
       message: 'Unable to analyze symptoms or save the result.',
     });
