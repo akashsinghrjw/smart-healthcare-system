@@ -1,6 +1,6 @@
 # 🏥 Smart Healthcare System
 
-A full-stack healthcare web application built with the **MERN Stack** (MongoDB, Express.js, React 19, Node.js) and integrated with **Google Gemini 1.5 Flash AI** for smart symptom triage and patient care management.
+A full-stack healthcare web application built with the **MERN Stack** (MongoDB, Express.js, React 19, Node.js) and integrated with **Google Gemini 3.8 Flash AI** for smart symptom triage and patient care management.
 
 ---
 
@@ -9,7 +9,7 @@ A full-stack healthcare web application built with the **MERN Stack** (MongoDB, 
 - **User Authentication:** Secure JWT-based registration and login system with bcrypt password hashing.
 - **Medical Records Vault:** Secure storage and retrieval of diagnostic lab reports and medical history.
 - **Medication Schedule Tracker:** Track prescription timings, frequencies, and dosage reminders.
-- **AI Symptom Checker:** Real-time symptom triage powered by Google Gemini 1.5 Flash via a secured backend route.
+- **AI Symptom Checker:** Real-time symptom triage powered by Google Gemini 3.8 Flash via a secured backend route.
 - **Support Helpdesk:** Automated ticket generation (`TKT-XXXXXX`) and status tracking for patient queries.
 - **Backend Protection:** Enhanced with Helmet security headers, CORS origin filtering, and IP rate limiting.
 
@@ -20,7 +20,7 @@ A full-stack healthcare web application built with the **MERN Stack** (MongoDB, 
 - **Frontend:** React 19, Vite, React Router 7, Context API, CSS
 - **Backend:** Node.js, Express.js, Mongoose
 - **Database:** MongoDB Atlas (Cloud Database)
-- **AI Integration:** Google Gemini API (`gemini-1.5-flash`)
+- **AI Integration:** Google Gemini API (`gemini-3.8-flash`)
 - **Security:** JSON Web Tokens (JWT), Bcrypt.js, Helmet, Express Rate Limit
 
 ---

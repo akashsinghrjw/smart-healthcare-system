@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_RVula15Hwj1durvquSpjpVvKzysd",
+      "name": "smart-healthcare-system",
+      "directory": "client",
+      "orgId": "team_BBhQZob0C5seGWw1rclIPpk1"
+    }
+  ]
+}

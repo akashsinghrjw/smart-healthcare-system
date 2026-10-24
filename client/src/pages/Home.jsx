@@ -214,12 +214,12 @@ export default function Home({
                 AI Symptom Triage Desk
               </h3>
               <p style={{ fontSize: "14px", color: "#475569", lineHeight: "1.6", margin: "0 0 18px" }}>
-                Natural language symptom evaluation using Google Gemini 1.5 Flash. Instantly categorizes clinical urgency levels and flags emergency risks.
+                Natural language symptom evaluation using Google Gemini 3.8 Flash. Instantly categorizes clinical urgency levels and flags emergency risks.
               </p>
             </div>
             <div style={{ background: "#ffffff", border: "1px solid #ccfbf1", borderRadius: "12px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }}></span>
-              <span style={{ fontSize: "12.5px", color: "#0f766e", fontWeight: "700" }}>Gemini 1.5 Flash Reasoning</span>
+              <span style={{ fontSize: "12.5px", color: "#0f766e", fontWeight: "700" }}>Gemini 3.8 Flash Reasoning</span>
             </div>
           </div>
 

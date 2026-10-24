@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import {
   FaCamera,
@@ -21,8 +21,20 @@ import {
   FaClock,
   FaUserEdit,
   FaShieldAlt,
-  FaSlidersH
+  FaSlidersH,
+  FaUserMd,
+  FaCalendarCheck,
+  FaMapMarkerAlt,
+  FaRupeeSign
 } from 'react-icons/fa';
+
+const vitalCardStyle = {
+  background: '#ffffff',
+  borderRadius: '14px',
+  padding: '16px',
+  border: '1px solid #e2e8f0',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+};
 
 export default function Dashboard({
   userName,
@@ -110,6 +122,91 @@ export default function Dashboard({
     { id: 1, text: 'Clinical database synchronized with MongoDB Atlas.', time: 'Just now' },
     { id: 2, text: 'Password and medical data encrypted with SSL.', time: 'Today' }
   ]);
+
+  // ==========================================
+  // DOCTORS MODULE & APPOINTMENT BOOKING
+  // ==========================================
+  const [doctorsList, setDoctorsList] = useState([]);
+  const [docLoading, setDocLoading] = useState(true);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [appointmentTime, setAppointmentTime] = useState('10:00');
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingMsg, setBookingMsg] = useState('');
+  const [latestReceipt, setLatestReceipt] = useState(null);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/doctors');
+        if (response.ok) {
+          const data = await response.json();
+          setDoctorsList(data);
+        }
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
+      } finally {
+        setDocLoading(false);
+      }
+    };
+    fetchDoctors();
+  }, []);
+
+  const handleBookAppointment = async (e) => {
+    e.preventDefault();
+    if (!selectedDoctor || !appointmentDate || !appointmentTime) {
+      alert('Kripya sabhi details bharein.');
+      return;
+    }
+
+    setBookingLoading(true);
+    setBookingMsg('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/appointments/book', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          doctorId: selectedDoctor._id,
+          date: appointmentDate,
+          time: appointmentTime
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        // Set receipt data for professional download/print
+        setLatestReceipt({
+          bookingId: data._id || `SHS-${Math.floor(100000 + Math.random() * 900000)}`,
+          patientName: userName,
+          patientEmail: userEmail,
+          patientPhone: userPhone || 'Not provided',
+          doctorName: selectedDoctor.name,
+          specialization: selectedDoctor.specialization,
+          hospital: selectedDoctor.hospitalName,
+          fees: selectedDoctor.fees,
+          date: appointmentDate,
+          time: appointmentTime,
+          bookedAt: new Date().toLocaleDateString()
+        });
+
+        setBookingMsg('Appointment successfully booked!');
+        setSelectedDoctor(null);
+        setTimeout(() => {
+          setBookingMsg('');
+        }, 3000);
+      } else {
+        setBookingMsg(data.message || 'Booking failed');
+      }
+    } catch (err) {
+      setBookingMsg('Network error while booking appointment.');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
 
   // ==========================================
   // AI SYMPTOMS ADVISOR (DIRECT GEMINI RESPONSE)
@@ -659,12 +756,120 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* 4. AI TRIAGE / SYMPTOM CHECKER */}
+      {/* 4. DOCTORS MODULE & APPOINTMENT BOOKING (Colourful & Animated with Doctor Logo/Avatar) */}
+      <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 100%)', borderRadius: '20px', padding: '24px', border: '1.5px solid #ccfbf1', boxShadow: '0 10px 25px -5px rgba(13, 148, 136, 0.08)', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0284c7 100%)', padding: '12px', borderRadius: '14px', color: '#ffffff', boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)' }}>
+              <FaUserMd size={22} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, color: '#0f172a', fontSize: '18px', fontWeight: '800' }}>
+                Available Doctors & Consultations
+              </h4>
+              <small style={{ color: '#0d9488', fontWeight: '700' }}>Book your slot with verified clinical specialists</small>
+            </div>
+          </div>
+          <span style={{ fontSize: '12px', background: '#0d9488', color: '#ffffff', padding: '6px 14px', borderRadius: '999px', fontWeight: '700', boxShadow: '0 2px 8px rgba(13, 148, 136, 0.2)' }}>
+            ● {doctorsList.length} Doctors Online
+          </span>
+        </div>
+
+        {docLoading ? (
+          <p style={{ textAlign: 'center', color: '#64748b', fontSize: '13px', margin: '30px 0' }}>Loading doctors from MongoDB Atlas...</p>
+        ) : doctorsList.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', margin: '30px 0' }}>No doctors found in database.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '18px' }}>
+            {doctorsList.map((doc) => (
+              <div 
+                key={doc._id} 
+                style={{ 
+                  background: 'linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%)', 
+                  border: '1.5px solid #bbf7d0', 
+                  borderRadius: '16px', 
+                  padding: '20px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-6px)';
+                  e.currentTarget.style.boxShadow = '0 16px 24px -6px rgba(16, 185, 129, 0.2)';
+                  e.currentTarget.style.borderColor = '#10b981';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
+                  e.currentTarget.style.borderColor = '#bbf7d0';
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #10b981 0%, #0d9488 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)' }}>
+                      <FaUserMd />
+                    </div>
+                    <div>
+                      <h5 style={{ margin: '0 0 2px', fontSize: '16.5px', color: '#0f172a', fontWeight: '800' }}>{doc.name}</h5>
+                      <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: '700' }}>{doc.qualification}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '11.5px', fontWeight: '800', padding: '4px 10px', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                      {doc.specialization}
+                    </span>
+                    <span style={{ fontSize: '13.5px', color: '#15803d', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                      <FaRupeeSign size={12} /> {doc.fees}
+                    </span>
+                  </div>
+                  
+                  <div style={{ background: '#ffffff', padding: '10px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', margin: '12px 0' }}>
+                    <p style={{ margin: 0, fontSize: '12.5px', color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FaMapMarkerAlt size={12} color="#0d9488" /> <b>{doc.hospitalName}</b>, {doc.location}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedDoctor(doc)}
+                  style={{
+                    width: '100%',
+                    padding: '11px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #0d9488 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '0.92'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                >
+                  <FaCalendarCheck /> Book Appointment
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 5. AI TRIAGE / SYMPTOM CHECKER */}
       <div style={{ background: '#ffffff', borderRadius: '16px', padding: '22px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
           <FaRobot color="#0d9488" size={18} />
           <h4 style={{ margin: 0, color: '#0f172a', fontSize: '16px', fontWeight: '700' }}>
-            AI Health Advisor (Google Gemini 1.5 Flash)
+            AI Health Advisor (Google Gemini 3.8 Flash)
           </h4>
         </div>
 
@@ -726,7 +931,7 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* 5. 2-COLUMN SECTION: VAULT + FLEXIBLE MEDICINE TRACKER */}
+      {/* 6. 2-COLUMN SECTION: VAULT + FLEXIBLE MEDICINE TRACKER */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px', marginBottom: '30px' }}>
         
         {/* HEALTH RECORDS VAULT */}
@@ -843,497 +1048,439 @@ export default function Dashboard({
             </div>
           </div>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 12px' }}>
-            Schedule courses date-to-date, on particular dates, or on weekly routine days.
+            Schedule and track your daily prescription dosages.
           </p>
 
-          {/* Mode Selector Tabs */}
-          <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '8px', marginBottom: '14px' }}>
-            <button
-              type="button"
-              onClick={() => setScheduleMode('range')}
-              style={{
-                flex: 1,
-                padding: '6px',
-                borderRadius: '6px',
-                border: 'none',
-                background: scheduleMode === 'range' ? '#0d9488' : 'transparent',
-                color: scheduleMode === 'range' ? '#ffffff' : '#64748b',
-                fontWeight: '700',
-                fontSize: '11.5px',
-                cursor: 'pointer'
-              }}
-            >
-              📅 Date to Date
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setScheduleMode('single')}
-              style={{
-                flex: 1,
-                padding: '6px',
-                borderRadius: '6px',
-                border: 'none',
-                background: scheduleMode === 'single' ? '#0d9488' : 'transparent',
-                color: scheduleMode === 'single' ? '#ffffff' : '#64748b',
-                fontWeight: '700',
-                fontSize: '11.5px',
-                cursor: 'pointer'
-              }}
-            >
-              🎯 Single Date
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setScheduleMode('weekly')}
-              style={{
-                flex: 1,
-                padding: '6px',
-                borderRadius: '6px',
-                border: 'none',
-                background: scheduleMode === 'weekly' ? '#0d9488' : 'transparent',
-                color: scheduleMode === 'weekly' ? '#ffffff' : '#64748b',
-                fontWeight: '700',
-                fontSize: '11.5px',
-                cursor: 'pointer'
-              }}
-            >
-              🔁 Weekly Days
-            </button>
-          </div>
-
-          {/* Add Medicine Schedule Form */}
-          <form onSubmit={handleAddMedicine} style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+          <form onSubmit={handleAddMedicine} style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
               <input
                 type="text"
-                placeholder="Medicine Name (e.g. Paracetamol 650mg)"
+                placeholder="Medicine Name & Dosage"
                 value={newMedName}
                 onChange={(e) => setNewMedName(e.target.value)}
                 required
                 style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
               />
-
               <input
                 type="time"
                 value={newMedTime}
                 onChange={(e) => setNewMedTime(e.target.value)}
-                required
-                style={{ width: '105px', padding: '6px 8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                style={{ width: '90px', padding: '8px 6px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }}
               />
             </div>
 
-            {scheduleMode === 'range' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '2px' }}>Start Date</label>
-                  <input
-                    type="date"
-                    value={newStartDate}
-                    onChange={(e) => setNewStartDate(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '11.5px', background: '#fff', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '2px' }}>End Date (Course)</label>
-                  <input
-                    type="date"
-                    value={newEndDate}
-                    onChange={(e) => setNewEndDate(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '11.5px', background: '#fff', boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-            )}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+              <select
+                value={scheduleMode}
+                onChange={(e) => setScheduleMode(e.target.value)}
+                style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+              >
+                <option value="range">Date Range</option>
+                <option value="single">Single Date</option>
+                <option value="weekly">Weekly Days</option>
+              </select>
 
-            {scheduleMode === 'single' && (
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '2px' }}>Particular Scheduled Date</label>
-                <input
-                  type="date"
-                  value={newSingleDate}
-                  onChange={(e) => setNewSingleDate(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff', boxSizing: 'border-box' }}
-                />
-              </div>
-            )}
+              {scheduleMode === 'range' && (
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <input type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} style={{ padding: '5px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>to</span>
+                  <input type="date" value={newEndDate} onChange={(e) => setNewEndDate(e.target.value)} style={{ padding: '5px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                </div>
+              )}
+
+              {scheduleMode === 'single' && (
+                <input type="date" value={newSingleDate} onChange={(e) => setNewSingleDate(e.target.value)} style={{ padding: '5px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+              )}
+            </div>
 
             {scheduleMode === 'weekly' && (
-              <div style={{ marginBottom: '10px' }}>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Select Repeat Days:</label>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {daysOfWeek.map((d) => (
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', justifyContent: 'space-between' }}>
+                {daysOfWeek.map((day) => {
+                  const active = selectedWeeklyDays.includes(day);
+                  return (
                     <button
                       type="button"
-                      key={`btn-day-${d}`}
-                      onClick={() => toggleDaySelection(d)}
+                      key={day}
+                      onClick={() => toggleDaySelection(day)}
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        border: selectedWeeklyDays.includes(d) ? '1px solid #0d9488' : '1px solid #cbd5e1',
-                        background: selectedWeeklyDays.includes(d) ? '#ccfbf1' : '#ffffff',
-                        color: selectedWeeklyDays.includes(d) ? '#0f766e' : '#64748b',
+                        flex: 1,
+                        padding: '5px 0',
                         fontSize: '11px',
                         fontWeight: '700',
+                        borderRadius: '6px',
+                        border: active ? '1px solid #0d9488' : '1px solid #cbd5e1',
+                        background: active ? '#0d9488' : '#ffffff',
+                        color: active ? '#ffffff' : '#475569',
                         cursor: 'pointer'
                       }}
                     >
-                      {d}
+                      {day}
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             )}
 
             <button
               type="submit"
-              style={{
-                width: '100%',
-                padding: '9px',
-                background: '#0d9488',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                fontSize: '12.5px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px'
-              }}
+              style={{ width: '100%', padding: '8px', background: '#0d9488', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', fontSize: '12px', cursor: 'pointer' }}
             >
-              <FaPlus size={11} /> Save Scheduled Reminder
+              + Add Medicine Reminder
             </button>
           </form>
 
-          {/* Active Medicines List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
             {medList.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '12.5px', margin: '14px 0' }}>
-                No active medicine reminders scheduled.
-              </p>
+              <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', margin: '10px 0' }}>No medicine reminders active.</p>
             ) : (
-              medList.map((med) => (
-                <div
-                  key={med.id}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                >
-                  <div>
-                    <strong style={{ fontSize: '13px', color: '#1e293b' }}>{med.name}</strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '11px', color: '#0d9488', fontWeight: '700' }}>
-                        <FaClock size={10} style={{ marginRight: '3px' }} />
-                        {med.time}
-                      </span>
+              medList.map((med) => {
+                const isTaken = med.status === 'Taken';
+                return (
+                  <div
+                    key={med.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: isTaken ? '#f0fdf4' : '#f8fafc',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      border: isTaken ? '1px solid #bbf7d0' : '1px solid #e2e8f0'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#1e293b', display: 'block', textDecoration: isTaken ? 'line-through' : 'none' }}>
+                        {med.name}
+                      </strong>
+                      <small style={{ color: '#64748b', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <FaClock size={10} /> {med.time} | {med.type === 'weekly' ? `Days: ${med.days.join(', ')}` : `${med.startDate || 'Today'}`}
+                      </small>
+                    </div>
 
-                      {med.type === 'range' && (
-                        <span style={{ fontSize: '10.5px', background: '#e0f2fe', color: '#0284c7', padding: '1px 5px', borderRadius: '4px', fontWeight: '600' }}>
-                          📅 {med.startDate} to {med.endDate}
-                        </span>
-                      )}
-
-                      {med.type === 'single' && (
-                        <span style={{ fontSize: '10.5px', background: '#fef3c7', color: '#d97706', padding: '1px 5px', borderRadius: '4px', fontWeight: '600' }}>
-                          🎯 Date: {med.startDate}
-                        </span>
-                      )}
-
-                      {med.type === 'weekly' && (
-                        <span style={{ fontSize: '10.5px', background: '#f3e8ff', color: '#7e22ce', padding: '1px 5px', borderRadius: '4px', fontWeight: '600' }}>
-                          🔁 Days: {med.days.join(', ')}
-                        </span>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => handleToggleMedStatus(med.id)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: isTaken ? '#dcfce7' : '#e2e8f0',
+                          color: isTaken ? '#15803d' : '#334155',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isTaken ? '✓ Taken' : 'Mark Taken'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMedicine(med.id)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}
+                      >
+                        <FaTrashAlt size={11} />
+                      </button>
                     </div>
                   </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      onClick={() => handleToggleMedStatus(med.id)}
-                      style={{
-                        background: med.status === 'Taken' ? '#dcfce7' : '#fef3c7',
-                        color: med.status === 'Taken' ? '#16a34a' : '#d97706',
-                        border: 'none',
-                        padding: '4px 9px',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {med.status === 'Taken' ? 'Taken ✓' : 'Pending ⏳'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMedicine(med.id)}
-                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
-                    >
-                      <FaTrashAlt size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
-
       </div>
 
-      {/* DANGER ZONE: DELETE ACCOUNT */}
-      <div style={{ textAlign: 'right', marginTop: '10px' }}>
-        <button
-          onClick={handleDeleteMyAccount}
-          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
-        >
-          <FaTrashAlt style={{ marginRight: '6px' }} /> Delete My Patient Account
-        </button>
-      </div>
+      {/* ================= MODALS & SLIDE-OUT DRAWER ================= -->
 
-      {/* SETTINGS & SECURITY DRAWER */}
-      {isDrawerOpen && (
-        <div
-          onClick={() => setIsDrawerOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(3px)', zIndex: 999998 }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: '400px',
-              maxWidth: '90vw',
-              background: '#ffffff',
-              boxShadow: '-10px 0 30px rgba(0,0,0,0.15)',
-              padding: '28px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              zIndex: 999999,
-              overflowY: 'auto'
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '20px' }}>
+      {/* 1. APPOINTMENT BOOKING MODAL */}
+      {selectedDoctor && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#ffffff', width: '420px', maxWidth: '100%', borderRadius: '16px', padding: '24px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaUserMd color="#0d9488" /> Book Appointment
+              </h3>
+              <button onClick={() => setSelectedDoctor(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', marginBottom: '14px', border: '1px solid #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 4px', color: '#0f172a', fontSize: '15px' }}>{selectedDoctor.name}</h4>
+              <p style={{ margin: '0 0 2px', fontSize: '12.5px', color: '#475569' }}>{selectedDoctor.specialization} • {selectedDoctor.hospitalName}</p>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#16a34a', fontWeight: '700' }}>Consultation Fee: ₹{selectedDoctor.fees}</p>
+            </div>
+
+            <form onSubmit={handleBookAppointment} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '800' }}>Account Settings</h3>
-                <small style={{ color: '#0d9488', fontWeight: '700' }}>SECURITY & PREFERENCES</small>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>Appointment Date</label>
+                <input type="date" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} required style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
               </div>
-              <button
-                onClick={() => setIsDrawerOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>Appointment Time</label>
+                <input type="time" value={appointmentTime} onChange={(e) => setAppointmentTime(e.target.value)} required style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+              </div>
+
+              <button type="submit" disabled={bookingLoading} style={{ width: '100%', padding: '11px', background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', marginTop: '6px' }}>
+                {bookingLoading ? 'Booking...' : 'Confirm Appointment'}
+              </button>
+            </form>
+
+            {bookingMsg && (
+              <div style={{ background: bookingMsg.includes('success') ? '#f0fdf4' : '#fef2f2', border: `1px solid ${bookingMsg.includes('success') ? '#bbf7d0' : '#fecaca'}`, padding: '12px', borderRadius: '8px', marginTop: '12px', color: bookingMsg.includes('success') ? '#166534' : '#dc2626', fontSize: '13px', fontWeight: '700', textAlign: 'center' }}>
+                {bookingMsg}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 2. PROFESSIONAL APPOINTMENT & PAYMENT RECEIPT MODAL */}
+      {latestReceipt && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#ffffff', width: '520px', maxWidth: '100%', borderRadius: '16px', padding: '28px', boxSizing: 'border-box', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            
+            {/* Receipt Header */}
+            <div style={{ textAlign: 'center', borderBottom: '2px dashed #e2e8f0', paddingBottom: '16px', marginBottom: '16px' }}>
+              <h3 style={{ margin: '0 0 4px', color: '#0d9488', fontSize: '20px', fontWeight: '800' }}>SMART HEALTHCARE SYSTEM</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Official Clinical Consultation & Payment Receipt</p>
+              <span style={{ display: 'inline-block', marginTop: '8px', background: '#f0fdfa', color: '#0d9488', fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '6px' }}>
+                Receipt ID: {latestReceipt.bookingId}
+              </span>
+            </div>
+
+            {/* Patient & Booking Details */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px', color: '#334155', marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Patient Name:</b></span>
+                <span>{latestReceipt.patientName}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Email Address:</b></span>
+                <span>{latestReceipt.patientEmail}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Phone Number:</b></span>
+                <span>{latestReceipt.patientPhone}</span>
+              </div>
+              <hr style={{ border: '0', borderTop: '1px solid #e2e8f0', margin: '4px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Consulting Doctor:</b></span>
+                <span style={{ color: '#0d9488', fontWeight: '700' }}>{latestReceipt.doctorName} ({latestReceipt.specialization})</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Hospital / Clinic:</b></span>
+                <span>{latestReceipt.hospital}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Appointment Slot:</b></span>
+                <span>{latestReceipt.date} at {latestReceipt.time}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Payment Status:</b></span>
+                <span style={{ color: '#16a34a', fontWeight: '700' }}>● SUCCESSFUL (Paid ₹{latestReceipt.fees})</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => window.print()} 
+                style={{ flex: 1, padding: '11px', background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
               >
+                🖨️ Print / Download PDF
+              </button>
+              <button 
+                onClick={() => setLatestReceipt(null)} 
+                style={{ flex: 1, padding: '11px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 3. SLIDE-OUT DRAWER FOR SETTINGS & SECURITY */}
+      {isDrawerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: '380px', maxWidth: '100%', background: '#ffffff', height: '100%', padding: '24px', overflowY: 'auto', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaSlidersH color="#0d9488" /> Profile & Security
+              </h3>
+              <button onClick={() => setIsDrawerOpen(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>
                 <FaTimes />
               </button>
             </div>
 
-            {/* EDIT PROFILE & NAME */}
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#0f172a', fontWeight: '700', fontSize: '14px' }}>
-                <FaUserEdit color="#0d9488" /> Change Name & Personal Info
-              </div>
-              {profileUpdateMsg && <div style={{ color: '#16a34a', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>✓ {profileUpdateMsg}</div>}
+            {/* Personal Info Update */}
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#334155', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaUserEdit color="#0d9488" /> Personal Info
+              </h4>
               <form onSubmit={handleUpdatePersonalInfo} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Full Name</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Contact Mobile</label>
-                  <input
-                    type="tel"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="Enter phone number"
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  style={{ padding: '9px', background: '#0d9488', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px', marginTop: '4px' }}
-                >
-                  Save Profile Changes
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Phone Number"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                />
+                <button type="submit" style={{ padding: '8px', background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer' }}>
+                  Update Info
                 </button>
               </form>
+              {profileUpdateMsg && <small style={{ color: '#0d9488', fontWeight: '700', marginTop: '4px', display: 'block' }}>{profileUpdateMsg}</small>}
             </div>
 
-            {/* PASSWORD UPDATE */}
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#0f172a', fontWeight: '700', fontSize: '14px' }}>
-                <FaLock color="#0d9488" /> Update Password
-              </div>
-              {pwdMsg && <div style={{ color: '#16a34a', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>✓ {pwdMsg}</div>}
-              {pwdError && <div style={{ color: '#dc2626', fontSize: '12px', fontWeight: '700', marginBottom: '8px' }}>✕ {pwdError}</div>}
+            {/* Password Update */}
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#334155', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaLock color="#0d9488" /> Change Password
+              </h4>
               <form onSubmit={handlePasswordUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <input
                   type="password"
-                  placeholder="New Password"
+                  placeholder="New Password (min 6 chars)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
                 />
                 <input
                   type="password"
                   placeholder="Confirm New Password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  style={{ padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
                 />
-                <button
-                  type="submit"
-                  disabled={pwdLoading}
-                  style={{ padding: '9px', background: '#0d9488', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: pwdLoading ? 'not-allowed' : 'pointer', fontSize: '13px' }}
-                >
-                  {pwdLoading ? 'Updating in Cloud...' : 'Change Password'}
+                <button type="submit" disabled={pwdLoading} style={{ padding: '8px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer' }}>
+                  {pwdLoading ? 'Updating...' : 'Update Password'}
                 </button>
               </form>
+              {pwdMsg && <small style={{ color: '#16a34a', fontWeight: '700', marginTop: '4px', display: 'block' }}>{pwdMsg}</small>}
+              {pwdError && <small style={{ color: '#dc2626', fontWeight: '700', marginTop: '4px', display: 'block' }}>{pwdError}</small>}
             </div>
 
-            {/* NOTIFICATION PREFERENCES */}
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#0f172a', fontWeight: '700', fontSize: '14px' }}>
-                <FaSlidersH color="#0d9488" /> Notification Preferences
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <span>Medicine Schedule Reminders</span>
-                  <input
-                    type="checkbox"
-                    checked={notifPreferences.doseReminders}
-                    onChange={() => toggleNotif('doseReminders')}
-                  />
+            {/* Notification Toggles */}
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#334155', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaBell color="#0d9488" /> Notifications & Alerts
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#475569' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                  <span>Dose Reminders</span>
+                  <input type="checkbox" checked={notifPreferences.doseReminders} onChange={() => toggleNotif('doseReminders')} />
                 </label>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <span>Critical Vitals Alert</span>
-                  <input
-                    type="checkbox"
-                    checked={notifPreferences.vitalsAlerts}
-                    onChange={() => toggleNotif('vitalsAlerts')}
-                  />
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                  <span>Vitals Threshold Alerts</span>
+                  <input type="checkbox" checked={notifPreferences.vitalsAlerts} onChange={() => toggleNotif('vitalsAlerts')} />
                 </label>
-                <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                  <span>Weekly Summary Emails</span>
-                  <input
-                    type="checkbox"
-                    checked={notifPreferences.emailReports}
-                    onChange={() => toggleNotif('emailReports')}
-                  />
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                  <span>Email Clinical Reports</span>
+                  <input type="checkbox" checked={notifPreferences.emailReports} onChange={() => toggleNotif('emailReports')} />
                 </label>
               </div>
             </div>
 
-            {/* DATA PRIVACY */}
-            <div style={{ background: '#f0fdfa', padding: '14px', borderRadius: '12px', border: '1px solid #ccfbf1', marginBottom: '20px', fontSize: '12px', color: '#0f766e', lineHeight: '1.5' }}>
-              <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontSize: '13px' }}>
-                <FaShieldAlt /> HIPAA & Cloud Security
-              </strong>
-              Your health vault files and diagnostic readings are encrypted. You can permanently delete your medical profile at any time.
-            </div>
-
-            {/* RECENT ALERTS */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: '#0f172a', fontWeight: '700', fontSize: '13.5px' }}>
-                <FaBell color="#0d9488" /> Recent Activity Alerts
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* System Status */}
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#334155', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaShieldAlt color="#0d9488" /> Security Status
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {notifications.map((n) => (
-                  <div key={n.id} style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', borderLeft: '4px solid #0d9488' }}>
-                    <p style={{ margin: 0, fontSize: '12.5px', color: '#1e293b', fontWeight: '600' }}>{n.text}</p>
-                    <small style={{ color: '#64748b', fontSize: '10.5px' }}>{n.time}</small>
+                  <div key={n.id} style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', color: '#334155' }}>
+                    <p style={{ margin: 0 }}>{n.text}</p>
+                    <small style={{ color: '#94a3b8' }}>{n.time}</small>
                   </div>
                 ))}
               </div>
             </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* DOCUMENT PREVIEW MODAL */}
-      {viewingReport && (
-        <div
-          onClick={() => setViewingReport(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px' }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '560px', maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{viewingReport.title}</h3>
-                <small style={{ color: '#64748b' }}>{viewingReport.type} • {viewingReport.date}</small>
-              </div>
-              <button onClick={() => setViewingReport(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
-            </div>
-
-            <div style={{ textAlign: 'center', background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', minHeight: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              {viewingReport.fileData ? (
-                viewingReport.fileData.startsWith('data:image') ? (
-                  <img src={viewingReport.fileData} alt={viewingReport.title} style={{ maxWidth: '100%', maxHeight: '350px', borderRadius: '8px', objectFit: 'contain' }} />
-                ) : (
-                  <div>
-                    <FaFileMedicalAlt size={48} color="#0d9488" style={{ marginBottom: '10px' }} />
-                    <h4 style={{ margin: '0 0 6px' }}>{viewingReport.fileName}</h4>
-                    <p style={{ color: '#64748b', fontSize: '13px', margin: '0 0 14px' }}>Document safely stored in vault.</p>
-                    <a href={viewingReport.fileData} download={viewingReport.fileName} style={{ background: '#0d9488', color: '#fff', padding: '8px 18px', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: '700' }}>
-                      Download File
-                    </a>
-                  </div>
-                )
-              ) : (
-                <div>
-                  <FaFileMedicalAlt size={44} color="#94a3b8" style={{ marginBottom: '8px' }} />
-                  <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>Clinical text record entry stored in your cloud vault.</p>
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-              <button onClick={() => setViewingReport(null)} style={{ background: '#0d9488', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
-                Close Preview
+            {/* Account Deletion */}
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: 'auto' }}>
+              <button
+                onClick={handleDeleteMyAccount}
+                style={{ width: '100%', padding: '10px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '8px', fontWeight: '700', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Delete My Patient Account
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* PROFILE PHOTO MODAL */}
+      {/* 4. VITALS CALCULATOR MODAL */}
+      {showVitalsModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#ffffff', width: '420px', maxWidth: '100%', borderRadius: '16px', padding: '24px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaHeartbeat color="#0d9488" /> Vitals Clinical Calculator
+              </h3>
+              <button onClick={() => setShowVitalsModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
+            </div>
+
+            <form onSubmit={handleCalculateVitals} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>Systolic BP (mmHg)</label>
+                  <input type="number" placeholder="120" value={systolicBP} onChange={(e) => setSystolicBP(e.target.value)} required style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>Diastolic BP (mmHg)</label>
+                  <input type="number" placeholder="80" value={diastolicBP} onChange={(e) => setDiastolicBP(e.target.value)} required style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>Heart Rate (bpm)</label>
+                  <input type="number" placeholder="72" value={heartRate} onChange={(e) => setHeartRate(e.target.value)} required style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '4px' }}>Temperature (°F)</label>
+                  <input type="number" step="0.1" placeholder="98.6" value={temperature} onChange={(e) => setTemperature(e.target.value)} required style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+
+              <button type="submit" style={{ width: '100%', padding: '11px', background: '#0d9488', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', marginTop: '6px' }}>
+                Analyze Vitals
+              </button>
+            </form>
+
+            {vitalsResult && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '14px', borderRadius: '10px', marginTop: '16px' }}>
+                <strong style={{ color: '#166534', display: 'block', marginBottom: '4px' }}>Status: {vitalsResult.status}</strong>
+                <p style={{ fontSize: '13px', color: '#15803d', margin: 0 }}>{vitalsResult.remarks}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. PROFILE PHOTO MODAL */}
       {showPhotoModal && (
-        <div
-          onClick={() => setShowPhotoModal(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px' }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '26px', width: '100%', maxWidth: '380px', textAlign: 'center' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ margin: 0, fontSize: '17px', color: '#0f172a', fontWeight: '800' }}>Profile Picture</h3>
-              <button onClick={() => setShowPhotoModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
-            </div>
-
-            <div style={{ width: '140px', height: '140px', borderRadius: '50%', background: '#0d9488', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px', fontWeight: '700', overflow: 'hidden', margin: '0 auto 20px', border: '4px solid #f1f5f9' }}>
-              {profileImage ? <img src={profileImage} alt="Profile Large" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : userName.charAt(0).toUpperCase()}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label htmlFor="modal-photo-upload" style={{ background: '#0d9488', color: '#ffffff', padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <FaCamera /> {profileImage ? 'Update / Change Picture' : 'Upload New Picture'}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#ffffff', width: '360px', maxWidth: '100%', borderRadius: '16px', padding: '24px', textAlign: 'center', boxSizing: 'border-box' }}>
+            <h3 style={{ margin: '0 0 16px', color: '#0f172a', fontSize: '18px', fontWeight: '800' }}>Manage Profile Photo</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label style={{ background: '#0d9488', color: '#fff', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                Upload New Photo
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
               </label>
-              <input id="modal-photo-upload" type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
-
               {profileImage && (
-                <button type="button" onClick={handleRemovePhoto} style={{ background: '#fee2e2', color: '#dc2626', padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <FaTrashAlt /> Remove Current Picture
+                <button onClick={handleRemovePhoto} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
+                  Remove Current Photo
                 </button>
               )}
-
-              <button type="button" onClick={() => setShowPhotoModal(false)} style={{ background: '#f1f5f9', color: '#475569', padding: '8px', borderRadius: '8px', fontWeight: '600', fontSize: '13px', border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setShowPhotoModal(false)} style={{ background: '#e2e8f0', color: '#334155', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '13px' }}>
                 Cancel
               </button>
             </div>
@@ -1341,72 +1488,35 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* CHECK YOUR VITALS MODAL */}
-      {showVitalsModal && (
-        <div
-          onClick={() => setShowVitalsModal(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px' }}
-        >
-          <div onClick={(e) => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '460px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a', fontWeight: '800' }}>Check Your Clinical Vitals</h3>
-                <small style={{ color: '#0d9488', fontWeight: '700' }}>EVALUATE CLINICAL STATUS</small>
-              </div>
-              <button onClick={() => setShowVitalsModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
+      {/* 6. REPORT VIEW MODAL */}
+      {viewingReport && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: '#ffffff', width: '500px', maxWidth: '100%', borderRadius: '16px', padding: '24px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{viewingReport.title}</h3>
+              <button onClick={() => setViewingReport(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}><FaTimes /></button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 14px' }}>Type: <b>{viewingReport.type}</b> | Date: <b>{viewingReport.date}</b></p>
+            
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', textAlign: 'center', minHeight: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {viewingReport.fileData ? (
+                viewingReport.fileName.endsWith('.pdf') ? (
+                  <iframe src={viewingReport.fileData} title="PDF Preview" style={{ width: '100%', height: '260px', border: 'none' }} />
+                ) : (
+                  <img src={viewingReport.fileData} alt="Report Preview" style={{ maxWidth: '100%', maxHeight: '260px', objectFit: 'contain' }} />
+                )
+              ) : (
+                <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Clinical note / Title record without attached binary file.</p>
+              )}
             </div>
 
-            <form onSubmit={handleCalculateVitals} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>Systolic BP (mmHg)</label>
-                  <input type="number" placeholder="e.g. 120" value={systolicBP} onChange={(e) => setSystolicBP(e.target.value)} required style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>Diastolic BP (mmHg)</label>
-                  <input type="number" placeholder="e.g. 80" value={diastolicBP} onChange={(e) => setDiastolicBP(e.target.value)} required style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>Heart Rate (bpm)</label>
-                  <input type="number" placeholder="e.g. 72" value={heartRate} onChange={(e) => setHeartRate(e.target.value)} required style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: '#334155', marginBottom: '4px' }}>Body Temp (°F)</label>
-                  <input type="number" step="0.1" placeholder="e.g. 98.6" value={temperature} onChange={(e) => setTemperature(e.target.value)} required style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }} />
-                </div>
-              </div>
-
-              <button type="submit" style={{ marginTop: '6px', padding: '11px', background: '#0d9488', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
-                Evaluate & Save Vitals
-              </button>
-            </form>
-
-            {vitalsResult && (
-              <div style={{ marginTop: '16px', padding: '14px', borderRadius: '10px', background: vitalsResult.alertType === 'danger' ? '#fef2f2' : vitalsResult.alertType === 'warning' ? '#fffbeb' : '#f0fdf4', border: `1px solid ${vitalsResult.alertType === 'danger' ? '#fecaca' : vitalsResult.alertType === 'warning' ? '#fde68a' : '#bbf7d0'}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  {vitalsResult.alertType === 'danger' ? <FaExclamationTriangle color="#dc2626" /> : <FaCheck color="#16a34a" />}
-                  <strong style={{ color: vitalsResult.alertType === 'danger' ? '#b91c1c' : '#15803d', fontSize: '13.5px' }}>
-                    Status: {vitalsResult.status}
-                  </strong>
-                </div>
-                <p style={{ margin: '0 0 6px', fontSize: '12.5px', color: '#334155', lineHeight: '1.4' }}>{vitalsResult.remarks}</p>
-                <small style={{ color: '#64748b', fontSize: '11px' }}>* Informational evaluation only. Not a medical prescription.</small>
-              </div>
-            )}
+            <button onClick={() => setViewingReport(null)} style={{ width: '100%', marginTop: '16px', padding: '10px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer' }}>
+              Close Preview
+            </button>
           </div>
         </div>
       )}
+
     </div>
   );
 }
-
-const vitalCardStyle = {
-  background: '#ffffff',
-  padding: '16px',
-  borderRadius: '12px',
-  border: '1px solid #e2e8f0',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-};

@@ -10,7 +10,7 @@ connectDB();
 
 const app = express();
 
-// ✅ FIXED: Trust proxy for Render deployment (Resolves express-rate-limit proxy error)
+// ✅ Trust proxy for Render deployment (Resolves express-rate-limit proxy error)
 app.set('trust proxy', 1);
 
 // Security Middlewares
@@ -36,6 +36,10 @@ app.use('/api/records', require('./routes/recordRoutes'));
 app.use('/api/tickets', require('./routes/ticketRoutes'));
 app.use('/api/triage', require('./routes/triageRoutes'));
 app.use('/api/medications', require('./routes/medicationRoutes'));
+
+// ✅ Added Doctor & Appointment Routes for the new module
+app.use('/api/doctors', require('./routes/doctorRoutes'));
+app.use('/api/appointments', require('./routes/appointmentRoutes'));
 
 // Root / Test Route
 app.get('/', (req, res) => {
