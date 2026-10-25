@@ -159,46 +159,33 @@ export default function Dashboard({
     setBookingLoading(true);
     setBookingMsg('');
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/appointments/book', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          doctorId: selectedDoctor._id,
-          date: appointmentDate,
-          time: appointmentTime
-        })
+      const data = await api.bookAppointment({
+        doctorId: selectedDoctor._id,
+        date: appointmentDate,
+        time: appointmentTime
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        setLatestReceipt({
-          bookingId: data._id || `SHS-${Math.floor(100000 + Math.random() * 900000)}`,
-          patientName: userName,
-          patientEmail: userEmail,
-          patientPhone: userPhone || 'Not provided',
-          doctorName: selectedDoctor.name,
-          specialization: selectedDoctor.specialization,
-          hospital: selectedDoctor.hospitalName,
-          fees: selectedDoctor.fees,
-          date: appointmentDate,
-          time: appointmentTime,
-          bookedAt: new Date().toLocaleDateString()
-        });
+      setLatestReceipt({
+        bookingId: data?._id || `SHS-${Math.floor(100000 + Math.random() * 900000)}`,
+        patientName: userName,
+        patientEmail: userEmail,
+        patientPhone: userPhone || 'Not provided',
+        doctorName: selectedDoctor.name,
+        specialization: selectedDoctor.specialization,
+        hospital: selectedDoctor.hospitalName,
+        fees: selectedDoctor.fees,
+        date: appointmentDate,
+        time: appointmentTime,
+        bookedAt: new Date().toLocaleDateString()
+      });
 
-        setBookingMsg('Appointment successfully booked!');
-        setSelectedDoctor(null);
-        setTimeout(() => {
-          setBookingMsg('');
-        }, 3000);
-      } else {
-        setBookingMsg(data.message || 'Booking failed');
-      }
+      setBookingMsg('Appointment successfully booked!');
+      setSelectedDoctor(null);
+      setTimeout(() => {
+        setBookingMsg('');
+      }, 3000);
     } catch (err) {
-      setBookingMsg('Network error while booking appointment.');
+      setBookingMsg(err.message || 'Network error while booking appointment.');
     } finally {
       setBookingLoading(false);
     }

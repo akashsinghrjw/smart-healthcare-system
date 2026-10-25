@@ -65,6 +65,13 @@ export const api = {
   // Doctors List
   getDoctors: () => request("/api/doctors"),
 
+  // Appointments Booking
+  bookAppointment: (data) =>
+    request("/api/appointments/book", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   // Medical Records
   getRecords: () => request("/api/records"),
 
