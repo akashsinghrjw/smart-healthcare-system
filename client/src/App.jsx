@@ -129,7 +129,7 @@ export default function App() {
             (patient) =>
               patient &&
               typeof patient === "object" &&
-              (!patient.role || patient.role === "patient")
+              String(patient.role || "patient").toLowerCase() !== "admin"
           )
           .map((patient) => ({
             ...patient,
@@ -503,8 +503,8 @@ export default function App() {
               borderRadius: "16px",
               padding: "24px",
               width: "100%",
-              maxWidth: "560px",
-              maxHeight: "85vh",
+              maxWidth: "640px",
+              maxHeight: "90vh",
               overflowY: "auto",
             }}
           >
@@ -523,7 +523,7 @@ export default function App() {
                   {viewingFileRecord.title}
                 </h3>
                 <small style={{ color: "#64748b" }}>
-                  {viewingFileRecord.type} • {viewingFileRecord.date || "Recorded"}
+                  {viewingFileRecord.type} - {viewingFileRecord.date || "Recorded"}
                 </small>
               </div>
               <button
@@ -561,6 +561,37 @@ export default function App() {
                       objectFit: "contain",
                     }}
                   />
+                ) : viewingFileRecord.fileData.startsWith("data:application/pdf") || 
+                    (viewingFileRecord.fileName && viewingFileRecord.fileName.toLowerCase().endsWith(".pdf")) ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
+                    <iframe
+                      src={viewingFileRecord.fileData}
+                      title={viewingFileRecord.title || "PDF Viewer"}
+                      style={{
+                        width: "100%",
+                        height: "450px",
+                        border: "1px solid #cbd5e1",
+                        borderRadius: "8px",
+                        background: "#fff",
+                      }}
+                    />
+                    <a
+                      href={viewingFileRecord.fileData}
+                      download={viewingFileRecord.fileName || "document.pdf"}
+                      style={{
+                        display: "inline-block",
+                        background: "#0d9488",
+                        color: "#fff",
+                        padding: "8px 18px",
+                        borderRadius: "6px",
+                        textDecoration: "none",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      📥 Download PDF File
+                    </a>
+                  </div>
                 ) : (
                   <div>
                     <h4 style={{ margin: "0 0 8px" }}>

@@ -35,9 +35,10 @@ export default function OwnerDashboard({
 
   const handleDeleteTriageLog = (logId) => {
     if (window.confirm("Admin: Kya aap is AI Consultation Query ko database se permanently delete karna chahte hain? Yeh user history se bhi hat jayegi.")) {
-      const currentLogs = safeLoad("real_triage_logs").filter((t) => t?.id !== logId);
-      localStorage.setItem("real_triage_logs", JSON.stringify(currentLogs));
-      setTriageLogs(currentLogs);
+      const currentLogs = safeLoad("real_triage_logs") || [];
+      const updatedLogs = currentLogs.filter((t) => t?.id !== logId && t?._id !== logId);
+      localStorage.setItem("real_triage_logs", JSON.stringify(updatedLogs));
+      setTriageLogs(updatedLogs);
     }
   };
 
@@ -45,9 +46,9 @@ export default function OwnerDashboard({
     e.preventDefault();
     if (!replyingTicket || !adminReplyText.trim()) return;
 
-    const currentTickets = safeLoad("support_tickets_list");
+    const currentTickets = safeLoad("support_tickets_list") || [];
     const updated = currentTickets.map((t) => {
-      if (t.id === replyingTicket.id) {
+      if (String(t.id || t._id) === String(replyingTicket.id || replyingTicket._id)) {
         return {
           ...t,
           status: "RESOLVED",
@@ -65,50 +66,39 @@ export default function OwnerDashboard({
   };
 
   const handleDeleteTicket = (id) => {
-    const currentTickets = safeLoad("support_tickets_list").filter((t) => t?.id !== id);
-    localStorage.setItem("support_tickets_list", JSON.stringify(currentTickets));
-    setSupportTickets(currentTickets);
+    const currentTickets = safeLoad("support_tickets_list") || [];
+    const updated = currentTickets.filter((t) => String(t?.id || t?._id) !== String(id));
+    localStorage.setItem("support_tickets_list", JSON.stringify(updated));
+    setSupportTickets(updated);
   };
 
   const handleSavePatientEdit = (e) => {
     e.preventDefault();
     if (!editingPatient) return;
 
-    const currentUsers = safeLoad("system_registered_users");
-    const oldUser = currentUsers.find((u) => u?.id === editingPatient.id);
+    const currentUsers = safeLoad("system_registered_users") || [];
+    const targetId = editingPatient.id || editingPatient._id;
+    const oldUser = currentUsers.find((u) => String(u?.id || u?._id) === String(targetId));
+    
     const updatedUsers = currentUsers.map((u) =>
-      u?.id === editingPatient.id ? { ...u, name: editingPatient.name, phone: editingPatient.phone, email: editingPatient.email } : u
+      String(u?.id || u?._id) === String(targetId) ? { ...u, name: editingPatient.name, phone: editingPatient.phone, email: editingPatient.email } : u
     );
 
     if (oldUser && oldUser.email !== editingPatient.email) {
-      const allRecords = safeLoad("real_records").map((r) =>
-        (r?.patientEmail || "").toLowerCase() === (oldUser.email || "").toLowerCase()
-          ? { ...r, patientName: editingPatient.name, patientEmail: editingPatient.email }
-          : r
-      );
-      const allMeds = safeLoad("real_medicines").map((m) =>
-        (m?.patientEmail || "").toLowerCase() === (oldUser.email || "").toLowerCase()
-          ? { ...m, patientName: editingPatient.name, patientEmail: editingPatient.email }
-          : m
-      );
-      const allTriage = safeLoad("real_triage_logs").map((t) =>
-        (t?.patientEmail || "").toLowerCase() === (oldUser.email || "").toLowerCase()
-          ? { ...t, patientName: editingPatient.name, patientEmail: editingPatient.email }
-          : t
-      );
-
+      const allRecords = safeLoad("real_records") || [];
+      const allMeds = safeLoad("real_medicines") || [];
+      const allTriage = safeLoad("real_triage_logs") || [];
+      
+      // Update local storage matches
       localStorage.setItem("real_records", JSON.stringify(allRecords));
       localStorage.setItem("real_medicines", JSON.stringify(allMeds));
       localStorage.setItem("real_triage_logs", JSON.stringify(allTriage));
-      setRecords(allRecords);
-      setMedicines(allMeds);
-      setTriageLogs(allTriage);
     }
 
     localStorage.setItem("system_registered_users", JSON.stringify(updatedUsers));
     setRegisteredUsers(updatedUsers);
 
-    if (selectedPatient && selectedPatient.id === editingPatient.id) {
+    if (selectedPatient && String(selectedPatient.id || selectedPatient._id) === String(targetId)) {
       setSelectedPatient(editingPatient);
     }
     setEditingPatient(null);
@@ -117,17 +107,19 @@ export default function OwnerDashboard({
   const handleAdminDeletePatient = (email, e) => {
     if (e) e.stopPropagation();
     if (window.confirm("Admin: Is patient ko hospital system se remove karein?")) {
-      const currentUsers = safeLoad("system_registered_users").filter((u) => (u?.email || "").toLowerCase() !== (email || "").toLowerCase());
-      const r = safeLoad("real_records").filter((x) => (x?.patientEmail || "").toLowerCase() !== (email || "").toLowerCase());
-      const m = safeLoad("real_medicines").filter((x) => (x?.patientEmail || "").toLowerCase() !== (email || "").toLowerCase());
-      const t = safeLoad("real_triage_logs").filter((x) => (x?.patientEmail || "").toLowerCase() !== (email || "").toLowerCase());
+      const currentUsers = safeLoad("system_registered_users") || [];
+      const currentUsersFiltered = currentUsers.filter((u) => (u?.email || "").toLowerCase() !== (email || "").toLowerCase());
+      
+      const r = (safeLoad("real_records") || []).filter((x) => (x?.patientEmail || "").toLowerCase() !== (email || "").toLowerCase());
+      const m = (safeLoad("real_medicines") || []).filter((x) => (x?.patientEmail || "").toLowerCase() !== (email || "").toLowerCase());
+      const t = (safeLoad("real_triage_logs") || []).filter((x) => (x?.patientEmail || "").toLowerCase() !== (email || "").toLowerCase());
 
-      localStorage.setItem("system_registered_users", JSON.stringify(currentUsers));
+      localStorage.setItem("system_registered_users", JSON.stringify(currentUsersFiltered));
       localStorage.setItem("real_records", JSON.stringify(r));
       localStorage.setItem("real_medicines", JSON.stringify(m));
       localStorage.setItem("real_triage_logs", JSON.stringify(t));
 
-      setRegisteredUsers(currentUsers);
+      setRegisteredUsers(currentUsersFiltered);
       setRecords(r);
       setMedicines(m);
       setTriageLogs(t);
@@ -138,9 +130,9 @@ export default function OwnerDashboard({
     }
   };
 
-  const selRecords = selectedPatient ? (records || []).filter((r) => (r?.patientEmail || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
-  const selMeds = selectedPatient ? (medicines || []).filter((m) => (m?.patientEmail || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
-  const selTriage = selectedPatient ? (triageLogs || []).filter((t) => (t?.patientEmail || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
+  const selRecords = selectedPatient ? (records || []).filter((r) => (r?.patientEmail || r?.email || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
+  const selMeds = selectedPatient ? (medicines || []).filter((m) => (m?.patientEmail || m?.email || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
+  const selTriage = selectedPatient ? (triageLogs || []).filter((t) => (t?.patientEmail || t?.email || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
 
   return (
     <div>
@@ -158,7 +150,7 @@ export default function OwnerDashboard({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e6f7f5", color: "#0d9488", display: "flex", alignItems: "center", justifyContent: "center" }}><FaUsers size={16} /></div>
             <div>
-              <h3 style={{ fontSize: "18px", margin: 0 }}>{registeredUsers.length}</h3>
+              <h3 style={{ fontSize: "18px", margin: 0 }}>{(registeredUsers || []).length}</h3>
               <span style={{ fontSize: "11px", color: "#64748b" }}>Patients</span>
             </div>
           </div>
@@ -169,7 +161,7 @@ export default function OwnerDashboard({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e0f2fe", color: "#0284c7", display: "flex", alignItems: "center", justifyContent: "center" }}><FaDatabase size={16} /></div>
             <div>
-              <h3 style={{ fontSize: "18px", margin: 0 }}>{records.length}</h3>
+              <h3 style={{ fontSize: "18px", margin: 0 }}>{(records || []).length}</h3>
               <span style={{ fontSize: "11px", color: "#64748b" }}>Reports</span>
             </div>
           </div>
@@ -180,7 +172,7 @@ export default function OwnerDashboard({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#ffedd5", color: "#ea580c", display: "flex", alignItems: "center", justifyContent: "center" }}><FaPills size={16} /></div>
             <div>
-              <h3 style={{ fontSize: "18px", margin: 0 }}>{medicines.length}</h3>
+              <h3 style={{ fontSize: "18px", margin: 0 }}>{(medicines || []).length}</h3>
               <span style={{ fontSize: "11px", color: "#64748b" }}>Meds</span>
             </div>
           </div>
@@ -191,7 +183,7 @@ export default function OwnerDashboard({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e6f7f5", color: "#0d9488", display: "flex", alignItems: "center", justifyContent: "center" }}><FaRobot size={16} /></div>
             <div>
-              <h3 style={{ fontSize: "18px", margin: 0 }}>{triageLogs.length}</h3>
+              <h3 style={{ fontSize: "18px", margin: 0 }}>{(triageLogs || []).length}</h3>
               <span style={{ fontSize: "11px", color: "#64748b" }}>AI Logs</span>
             </div>
           </div>
@@ -202,7 +194,7 @@ export default function OwnerDashboard({
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fef3c7", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center" }}><FaEnvelopeOpenText size={16} /></div>
             <div>
-              <h3 style={{ fontSize: "18px", margin: 0 }}>{supportTickets.length}</h3>
+              <h3 style={{ fontSize: "18px", margin: 0 }}>{(supportTickets || []).length}</h3>
               <span style={{ fontSize: "11px", color: "#64748b" }}>Queries</span>
             </div>
           </div>
@@ -213,22 +205,22 @@ export default function OwnerDashboard({
       {/* DIRECTORY SECTION */}
       <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "22px", marginBottom: "22px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h4 style={{ fontSize: "16px", margin: 0, color: "#0f172a" }}>Hospital Patients Directory</h4>
+          <h4 style={{ fontSize: "16px", margin: 0, color: "#0f172a" }}>Hospital Patients Directory ({(registeredUsers || []).length})</h4>
           <small style={{ color: "#0d9488", fontWeight: "600" }}>Admin Access: View Files, Documents & Edit Patient</small>
         </div>
 
-        {registeredUsers.length === 0 ? (
+        {(!registeredUsers || registeredUsers.length === 0) ? (
           <p style={{ textAlign: "center", color: "#94a3b8", padding: "16px" }}>No registered patients yet.</p>
         ) : (
           registeredUsers.map((p) => (
-            <div key={p?.id || Math.random()} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px" }}>
+            <div key={p?.id || p?._id || Math.random()} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px 16px", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px" }}>
               <div>
                 <strong>{p?.name || "Patient"}</strong> ({p?.phone || "N/A"})
-                <small style={{ display: "block", color: "#64748b", marginTop: "2px" }}>{p?.email || "No Email"} | Added: {p?.registeredAt || "N/A"}</small>
+                <small style={{ display: "block", color: "#64748b", marginTop: "2px" }}>{p?.email || "No Email"} | Added: {p?.registeredAt || p?.createdAt ? new Date(p.registeredAt || p.createdAt).toLocaleDateString() : "N/A"}</small>
               </div>
 
               <div style={{ display: "flex", gap: "8px" }}>
-                <button style={{ background: "#f1f5f9", color: "#0f172a", border: "1px solid #cbd5e1", padding: "5px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }} onClick={() => setEditingPatient({ ...p })}>
+                <button style={{ background: "#f1f5f9", color: "#0f172a", border: "1px solid #cbd5e1", padding: "5px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }} onClick={() => setEditingPatient({ ...p, id: p.id || p._id })}>
                   <FaEdit color="#0d9488" /> Edit
                 </button>
                 <button style={{ background: "#ffffff", color: "#0d9488", border: "1.5px solid #0d9488", padding: "5px 12px", borderRadius: "999px", fontWeight: "600", cursor: "pointer", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }} onClick={() => setSelectedPatient(p)}>
@@ -248,12 +240,12 @@ export default function OwnerDashboard({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <FaEnvelopeOpenText color="#d97706" size={18} style={{ width: "18px", height: "18px" }} />
-            <h4 style={{ fontSize: "16px", margin: 0, color: "#0f172a" }}>Submitted Support Queries ({supportTickets.length})</h4>
+            <h4 style={{ fontSize: "16px", margin: 0, color: "#0f172a" }}>Submitted Support Queries ({(supportTickets || []).length})</h4>
           </div>
           <small style={{ color: "#64748b" }}>Admin Action: Click 'Reply & Resolve' to send response</small>
         </div>
 
-        {supportTickets.length === 0 ? (
+        {(!supportTickets || supportTickets.length === 0) ? (
           <div style={{ textAlign: "center", padding: "26px", background: "#f8fafc", borderRadius: "10px", border: "1.5px dashed #cbd5e1" }}>
             <span style={{ fontSize: "28px", display: "block", marginBottom: "6px" }}>📬</span>
             <strong style={{ fontSize: "14px", color: "#0f172a" }}>No pending queries right now.</strong>
@@ -261,7 +253,7 @@ export default function OwnerDashboard({
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
             {supportTickets.map((ticket) => (
-              <div key={ticket?.id} style={{ background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
+              <div key={ticket?.id || ticket?._id} style={{ background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: "12px", padding: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
                   <div>
                     <span style={{
@@ -272,7 +264,7 @@ export default function OwnerDashboard({
                       fontSize: "11px",
                       fontWeight: "700"
                     }}>
-                      {ticket?.ticketId} | {ticket?.status === "RESOLVED" ? "SOLVED" : "PENDING"}
+                      {ticket?.ticketId || "TICKET"} | {ticket?.status === "RESOLVED" ? "SOLVED" : "PENDING"}
                     </span>
                     <strong style={{ display: "block", fontSize: "14px", color: "#0f172a", marginTop: "4px" }}>
                       {ticket?.name}
@@ -280,13 +272,13 @@ export default function OwnerDashboard({
                     <small style={{ color: "#64748b" }}>{ticket?.email} | {ticket?.date}</small>
                   </div>
 
-                  <button onClick={() => handleDeleteTicket(ticket?.id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
+                  <button onClick={() => handleDeleteTicket(ticket?.id || ticket?._id)} style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
                     <FaTrash />
                   </button>
                 </div>
 
                 <div style={{ background: "#ffffff", padding: "10px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "12.5px", color: "#334155", marginBottom: "10px" }}>
-                  "{ticket?.msg}"
+                  "{ticket?.msg || ticket?.message}"
                 </div>
 
                 {ticket?.status === "RESOLVED" ? (
@@ -295,7 +287,7 @@ export default function OwnerDashboard({
                   </div>
                 ) : (
                   <div>
-                    {replyingTicket?.id === ticket?.id ? (
+                    {String(replyingTicket?.id || replyingTicket?._id) === String(ticket?.id || ticket?._id) ? (
                       <form onSubmit={handleResolveSubmit} style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
                         <textarea
                           rows="2"
@@ -347,7 +339,7 @@ export default function OwnerDashboard({
                   <p style={{ fontSize: "12px", color: "#94a3b8" }}>No documents uploaded by this patient.</p>
                 ) : (
                   selRecords.map((r) => (
-                    <div key={r?.id} style={{ fontSize: "12.5px", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", marginBottom: "6px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={r?.id || r?._id} style={{ fontSize: "12.5px", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", marginBottom: "6px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <strong>{r?.title}</strong> ({r?.type})
                         <small style={{ display: "block", color: "#64748b" }}>File: {r?.fileName || "N/A"}</small>
@@ -373,13 +365,13 @@ export default function OwnerDashboard({
                   <p style={{ fontSize: "12px", color: "#94a3b8" }}>No AI queries asked by this patient.</p>
                 ) : (
                   selTriage.map((t) => (
-                    <div key={t?.id} style={{ fontSize: "12px", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", marginBottom: "6px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div key={t?.id || t?._id} style={{ fontSize: "12px", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", marginBottom: "6px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div>
                         <strong>Query: "{t?.query}"</strong>
                         <small style={{ display: "block", color: "#0d9488", marginTop: "2px" }}>{t?.condition} | {t?.date} ({t?.time})</small>
                       </div>
                       <button
-                        onClick={() => handleDeleteTriageLog(t?.id)}
+                        onClick={() => handleDeleteTriageLog(t?.id || t?._id)}
                         style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                         title="Delete this query from patient history & system"
                       >
@@ -395,7 +387,7 @@ export default function OwnerDashboard({
               <strong style={{ fontSize: "13.5px", color: "#ea580c", display: "block", marginBottom: "6px" }}>Scheduled Medicines ({selMeds.length})</strong>
               <div style={{ maxHeight: "90px", overflowY: "auto" }}>
                 {selMeds.length === 0 ? <p style={{ fontSize: "12px", color: "#94a3b8" }}>No medicines.</p> : selMeds.map((m) => (
-                  <div key={m?.id} style={{ fontSize: "12px", background: "#f8fafc", padding: "4px 8px", marginBottom: "4px", borderRadius: "4px" }}>
+                  <div key={m?.id || m?._id} style={{ fontSize: "12px", background: "#f8fafc", padding: "4px 8px", marginBottom: "4px", borderRadius: "4px" }}>
                     {m?.name} ({m?.exactTime} | {m?.days})
                   </div>
                 ))}
@@ -455,33 +447,33 @@ export default function OwnerDashboard({
               <button onClick={() => setAdminModal(null)} style={{ border: "none", background: "none", fontSize: "18px", cursor: "pointer" }}><FaTimes /></button>
             </div>
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-              {adminModal === "patients" && (registeredUsers.length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : registeredUsers.map((p) => (
-                <div key={p?.id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
+              {adminModal === "patients" && ((registeredUsers || []).length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : registeredUsers.map((p) => (
+                <div key={p?.id || p?._id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
                   <strong>{p?.name}</strong> ({p?.phone})<small style={{ display: "block", color: "#64748b" }}>{p?.email}</small>
                 </div>
               )))}
-              {adminModal === "records" && (records.length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : records.map((r) => (
-                <div key={r?.id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {adminModal === "records" && ((records || []).length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : records.map((r) => (
+                <div key={r?.id || r?._id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <strong>{r?.title}</strong><small style={{ display: "block", color: "#64748b" }}>{r?.patientName} ({r?.type})</small>
                   </div>
                   <button onClick={() => setViewingFileRecord(r)} style={{ border: "none", background: "#e0f2fe", color: "#0284c7", padding: "3px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>View Doc</button>
                 </div>
               )))}
-              {adminModal === "meds" && (medicines.length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : medicines.map((m) => (
-                <div key={m?.id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
+              {adminModal === "meds" && ((medicines || []).length === 0 ? <p style={{ color: "#94a3b8" }}>No data.</p> : medicines.map((m) => (
+                <div key={m?.id || m?._id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
                   <strong>{m?.name}</strong><small style={{ display: "block", color: "#ea580c" }}>{m?.patientName} | {m?.exactTime} ({m?.days})</small>
                 </div>
               )))}
-              {adminModal === "triage" && (triageLogs.length === 0 ? <p style={{ color: "#94a3b8" }}>No AI queries found.</p> : triageLogs.map((t) => (
-                <div key={t?.id || Math.random()} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 12px", borderRadius: "8px", marginBottom: "8px", fontSize: "12.5px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {adminModal === "triage" && ((triageLogs || []).length === 0 ? <p style={{ color: "#94a3b8" }}>No AI queries found.</p> : triageLogs.map((t) => (
+                <div key={t?.id || t?._id || Math.random()} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "10px 12px", borderRadius: "8px", marginBottom: "8px", fontSize: "12.5px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <strong>Query: "{t?.query}"</strong>
                     <small style={{ display: "block", color: "#0d9488", margin: "2px 0" }}>Patient: {t?.patientName} ({t?.patientEmail})</small>
                     <small style={{ color: "#64748b" }}>{t?.condition} | {t?.date} ({t?.time})</small>
                   </div>
                   <button
-                    onClick={() => handleDeleteTriageLog(t?.id)}
+                    onClick={() => handleDeleteTriageLog(t?.id || t?._id)}
                     style={{ background: "#fee2e2", color: "#dc2626", border: "none", padding: "5px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                     title="Delete this query from patient & system"
                   >
@@ -489,14 +481,14 @@ export default function OwnerDashboard({
                   </button>
                 </div>
               )))}
-              {adminModal === "queries" && (supportTickets.length === 0 ? <p style={{ color: "#94a3b8" }}>No queries found.</p> : supportTickets.map((t) => (
-                <div key={t?.id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
+              {adminModal === "queries" && ((supportTickets || []).length === 0 ? <p style={{ color: "#94a3b8" }}>No queries found.</p> : supportTickets.map((t) => (
+                <div key={t?.id || t?._id || Math.random()} style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "6px", marginBottom: "6px", fontSize: "12.5px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <strong>{t?.name} ({t?.ticketId})</strong>
                     <span style={{ color: t?.status === "RESOLVED" ? "#16a34a" : "#d97706", fontSize: "11px", fontWeight: "700" }}>{t?.status}</span>
                   </div>
                   <small style={{ display: "block", color: "#64748b" }}>{t?.email}</small>
-                  <p style={{ margin: "4px 0 0", color: "#334155" }}>"{t?.msg}"</p>
+                  <p style={{ margin: "4px 0 0", color: "#334155" }}>"{t?.msg || t?.message}"</p>
                 </div>
               )))}
             </div>

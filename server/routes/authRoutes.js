@@ -1,4 +1,3 @@
-
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -8,14 +7,14 @@ const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-const generateToken = (id) => {
+const generateToken = (id, role) => {
   const secret = process.env.JWT_SECRET;
 
   if (!secret) {
     throw new Error("JWT_SECRET is not configured on the server.");
   }
 
-  return jwt.sign({ id }, secret, { expiresIn: "30d" });
+  return jwt.sign({ id, role }, secret, { expiresIn: "30d" });
 };
 
 // Register a patient account.
@@ -55,7 +54,7 @@ router.post("/register", async (req, res) => {
       phone: user.phone,
       role: user.role,
       createdAt: user.createdAt,
-      token: generateToken(user._id.toString()),
+      token: generateToken(user._id.toString(), user.role),
     });
   } catch (error) {
     console.error("Registration error:", error.message);
@@ -103,7 +102,7 @@ router.post("/login", async (req, res) => {
       phone: user.phone || "",
       role: user.role,
       createdAt: user.createdAt,
-      token: generateToken(user._id.toString()),
+      token: generateToken(user._id.toString(), user.role),
     });
   } catch (error) {
     console.error("Login error:", error.message);
