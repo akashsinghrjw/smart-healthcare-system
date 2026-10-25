@@ -1,4 +1,3 @@
-
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   "https://smart-healthcare-system-ykl7.onrender.com"
@@ -62,6 +61,9 @@ export const api = {
     request("/api/auth/delete-account", {
       method: "DELETE",
     }),
+
+  // Doctors List
+  getDoctors: () => request("/api/doctors"),
 
   // Medical Records
   getRecords: () => request("/api/records"),
