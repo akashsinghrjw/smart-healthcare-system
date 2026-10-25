@@ -138,11 +138,8 @@ export default function Dashboard({
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/doctors');
-        if (response.ok) {
-          const data = await response.json();
-          setDoctorsList(data);
-        }
+        const data = await api.getDoctors();
+        setDoctorsList(data);
       } catch (err) {
         console.error('Error fetching doctors:', err);
       } finally {
@@ -178,7 +175,6 @@ export default function Dashboard({
 
       const data = await response.json();
       if (response.ok) {
-        // Set receipt data for professional download/print
         setLatestReceipt({
           bookingId: data._id || `SHS-${Math.floor(100000 + Math.random() * 900000)}`,
           patientName: userName,
@@ -756,7 +752,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* 4. DOCTORS MODULE & APPOINTMENT BOOKING (Colourful & Animated with Doctor Logo/Avatar) */}
+      {/* 4. DOCTORS MODULE & APPOINTMENT BOOKING */}
       <div style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 100%)', borderRadius: '20px', padding: '24px', border: '1.5px solid #ccfbf1', boxShadow: '0 10px 25px -5px rgba(13, 148, 136, 0.08)', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1188,7 +1184,7 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* ================= MODALS & SLIDE-OUT DRAWER ================= -->
+      {/* ================= MODALS & SLIDE-OUT DRAWER ================= */}
 
       {/* 1. APPOINTMENT BOOKING MODAL */}
       {selectedDoctor && (

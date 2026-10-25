@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './BookAppointment.css'; // Optional styling file
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://smart-healthcare-system-ykl7.onrender.com"
+).replace(/\/$/, "");
+
 const BookAppointment = () => {
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -17,7 +22,7 @@ const BookAppointment = () => {
     const fetchDoctors = async () => {
       try {
         const token = localStorage.getItem('token'); // Assuming JWT token is stored here
-        const res = await axios.get('http://localhost:5000/api/doctors', {
+        const res = await axios.get(`${API_BASE_URL}/api/doctors`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setDoctors(res.data);
@@ -53,7 +58,7 @@ const BookAppointment = () => {
         amount: selectedDoctor.fees
       };
 
-      const res = await axios.post('http://localhost:5000/api/appointments/book', bookingPayload, {
+      const res = await axios.post(`${API_BASE_URL}/api/appointments/book`, bookingPayload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -119,7 +124,7 @@ const BookAppointment = () => {
                 }}
               >
                 <h4>{doc.name}</h4>
-                <p style={{ fontSize: '13px', color: '#666' }}>{doc.qualification} - {doc.specialization}</p>
+                <p style={{ fontSize: '13px', color: '#666' }}>{doc.qualification} {doc.specialization}</p>
                 <p style={{ fontSize: '13px' }}>🏥 {doc.hospitalName}</p>
                 <p style={{ fontSize: '13px' }}>📍 {doc.location}</p>
                 <p style={{ fontWeight: 'bold', color: '#008080' }}>Fee: ₹{doc.fees}</p>
@@ -148,7 +153,7 @@ const BookAppointment = () => {
               </div>
 
               <button type="submit" disabled={loading} style={{ padding: '10px 25px', background: '#008080', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
-                {loading ? 'Processing Payment...' : `Pay ₹${selectedDoctor.fees} & Book Appointment`}
+                {loading ? 'Processing Payment...' : `Pay ₹{selectedDoctor.fees} & Book Appointment`}
               </button>
             </div>
           )}
