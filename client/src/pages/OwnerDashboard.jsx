@@ -15,6 +15,11 @@ import {
 } from "react-icons/fa";
 import { safeLoad } from "../utils/storage";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
 export default function OwnerDashboard({
   registeredUsers,
   setRegisteredUsers,
@@ -64,7 +69,7 @@ export default function OwnerDashboard({
 
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/doctors/admin/create-doctor", {
+      const res = await fetch(`${API_BASE_URL}/api/doctors/admin/create-doctor`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

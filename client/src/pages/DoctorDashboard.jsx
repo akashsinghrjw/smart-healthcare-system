@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { FaUserMd, FaCamera, FaSave, FaCheckCircle, FaCalendarCheck, FaUserInjured, FaRupeeSign, FaStethoscope, FaChartPie, FaTimes } from "react-icons/fa";
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
 export default function DoctorDashboard({ userName, userEmail, onNavigateHome }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   
@@ -29,7 +34,7 @@ export default function DoctorDashboard({ userName, userEmail, onNavigateHome })
         const token = localStorage.getItem("token");
         
         // 1. Fetch Doctor Profile
-        const profileRes = await fetch("http://localhost:5000/api/doctors/me", {
+        const profileRes = await fetch(`${API_BASE_URL}/api/doctors/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (profileRes.ok) {
@@ -51,7 +56,7 @@ export default function DoctorDashboard({ userName, userEmail, onNavigateHome })
         }
 
         // 2. Fetch Real Booked Appointments from Backend Database
-        const apptRes = await fetch("http://localhost:5000/api/appointments/doctor/appointments", {
+        const apptRes = await fetch(`${API_BASE_URL}/api/appointments/doctor/appointments`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (apptRes.ok) {
@@ -87,7 +92,7 @@ export default function DoctorDashboard({ userName, userEmail, onNavigateHome })
     setMessage("");
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/doctors/profile", {
+      const res = await fetch(`${API_BASE_URL}/api/doctors/profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -125,7 +130,7 @@ export default function DoctorDashboard({ userName, userEmail, onNavigateHome })
       const token = localStorage.getItem("token");
       const apptId = selectedAppt._id || selectedAppt.id;
 
-      const res = await fetch(`http://localhost:5000/api/appointments/${apptId}/complete`, {
+      const res = await fetch(`${API_BASE_URL}/api/appointments/${apptId}/complete`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
