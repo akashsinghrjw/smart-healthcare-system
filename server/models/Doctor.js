@@ -12,8 +12,8 @@ const doctorSchema = new mongoose.Schema({
   fees: { type: Number, required: true },
   phone: { type: String, default: '' },
   
-  // ✅ Nayi fields: Profile Image aur Bio ke liye
-  profileImage: { type: String, default: '' }, // Base64 string ya Image URL store karne ke liye
+  //  Profile Image aur Bio ke liye
+  profileImage: { type: String, default: '' }, //  string ya Image URL store karne ke liye
   bio: { type: String, default: '' }
 }, { timestamps: true });
 
