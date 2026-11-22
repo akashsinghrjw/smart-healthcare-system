@@ -28,6 +28,11 @@ import {
   FaRupeeSign
 } from 'react-icons/fa';
 
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
 const vitalCardStyle = {
   background: '#ffffff',
   borderRadius: '14px',
@@ -135,18 +140,35 @@ export default function Dashboard({
   const [bookingMsg, setBookingMsg] = useState('');
   const [latestReceipt, setLatestReceipt] = useState(null);
 
+  // Patient's booked appointments & prescriptions list with expandable card state & main section toggle
+  const [patientAppointments, setPatientAppointments] = useState([]);
+  const [apptLoading, setApptLoading] = useState(true);
+  const [expandedCardId, setExpandedCardId] = useState(null);
+  const [showAppointmentsSection, setShowAppointmentsSection] = useState(false);
+
   useEffect(() => {
-    const fetchDoctors = async () => {
+    const fetchDoctorsAndAppointments = async () => {
       try {
-        const data = await api.getDoctors();
-        setDoctorsList(data);
+        const token = localStorage.getItem('token');
+        const [docData, apptRes] = await Promise.all([
+          api.getDoctors(),
+          fetch(`${API_BASE_URL}/api/appointments/patient/my-appointments`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).then(res => res.json()).catch(() => [])
+        ]);
+        
+        setDoctorsList(docData || []);
+        if (Array.isArray(apptRes)) {
+          setPatientAppointments(apptRes);
+        }
       } catch (err) {
-        console.error('Error fetching doctors:', err);
+        console.error('Error fetching dashboard data:', err);
       } finally {
         setDocLoading(false);
+        setApptLoading(false);
       }
     };
-    fetchDoctors();
+    fetchDoctorsAndAppointments();
   }, []);
 
   const handleBookAppointment = async (e) => {
@@ -161,12 +183,13 @@ export default function Dashboard({
     try {
       const data = await api.bookAppointment({
         doctorId: selectedDoctor._id,
+        doctorEmail: selectedDoctor.email,
         date: appointmentDate,
         time: appointmentTime
       });
 
       setLatestReceipt({
-        bookingId: data?._id || `SHS-${Math.floor(100000 + Math.random() * 900000)}`,
+        bookingId: data?.appointment?.receiptId || data?._id || `SHS-${Math.floor(100000 + Math.random() * 900000)}`,
         patientName: userName,
         patientEmail: userEmail,
         patientPhone: userPhone || 'Not provided',
@@ -181,6 +204,14 @@ export default function Dashboard({
 
       setBookingMsg('Appointment successfully booked!');
       setSelectedDoctor(null);
+      
+      // Refresh patient appointments list
+      const token = localStorage.getItem('token');
+      const apptRes = await fetch(`${API_BASE_URL}/api/appointments/patient/my-appointments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => res.json()).catch(() => []);
+      if (Array.isArray(apptRes)) setPatientAppointments(apptRes);
+
       setTimeout(() => {
         setBookingMsg('');
       }, 3000);
@@ -737,6 +768,127 @@ export default function Dashboard({
           <h4 style={{ margin: '6px 0 0', fontSize: '20px', color: '#0f172a' }}>22.4 <small style={{ fontSize: '12px', color: '#64748b' }}>Normal</small></h4>
           <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: '700' }}>● Healthy</span>
         </div>
+      </div>
+
+      {/* PATIENT'S APPOINTMENTS & CONSULTATIONS (COLLAPSIBLE MAIN SECTION & EXPANDABLE CARDS) */}
+      <div style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '20px', padding: '24px', border: '1.5px solid #ccfbf1', boxShadow: '0 10px 25px -5px rgba(13, 148, 136, 0.08)', marginBottom: '24px' }}>
+        <div 
+          onClick={() => setShowAppointmentsSection(!showAppointmentsSection)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'linear-gradient(135deg, #0d9488 0%, #0284c7 100%)', padding: '10px', borderRadius: '12px', color: '#ffffff', boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)' }}>
+              <FaCalendarCheck size={18} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, color: '#0f172a', fontSize: '17px', fontWeight: '800' }}>
+                My Booked Appointments & Consultations {showAppointmentsSection ? '▼' : '▶'}
+              </h4>
+              <small style={{ color: '#0d9488', fontWeight: '700' }}>Tap here to open/close appointments list</small>
+            </div>
+          </div>
+          <span style={{ fontSize: '12px', background: '#0d9488', color: '#ffffff', padding: '5px 12px', borderRadius: '999px', fontWeight: '700', boxShadow: '0 2px 8px rgba(13, 148, 136, 0.2)' }}>
+            {patientAppointments.length} Bookings
+          </span>
+        </div>
+
+        {showAppointmentsSection && (
+          <div style={{ marginTop: '20px', animation: 'fadeIn 0.3s ease-in-out' }}>
+            {apptLoading ? (
+              <p style={{ textAlign: 'center', color: '#64748b', fontSize: '13px', margin: '20px 0' }}>Loading appointments...</p>
+            ) : patientAppointments.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '30px', background: '#f8fafc', borderRadius: '14px', border: '1px dashed #cbd5e1' }}>
+                <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: 0 }}>Aapne abhi tak koi appointment book nahi kiya hai.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {patientAppointments.map((appt) => {
+                  const isExpanded = expandedCardId === appt._id;
+                  const isCompleted = appt.status === 'Completed';
+
+                  return (
+                    <div
+                      key={appt._id}
+                      onClick={() => setExpandedCardId(isExpanded ? null : appt._id)}
+                      style={{
+                        background: isCompleted ? 'linear-gradient(135deg, #f0fdf4 100%, #dcfce7 0%)' : 'linear-gradient(135deg, #fefce8 100%, #fef9c3 0%)',
+                        border: isCompleted ? '1.5px solid #86efac' : '1.5px solid #fde047',
+                        borderRadius: '16px',
+                        padding: '16px 20px',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: isExpanded ? '0 10px 25px -5px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: isCompleted ? '#22c55e' : '#eab308', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                            🩺
+                          </div>
+                          <div>
+                            <h5 style={{ margin: '0 0 2px', fontSize: '15px', color: '#0f172a', fontWeight: '800' }}>
+                              Doctor Consultation ({appt.date})
+                            </h5>
+                            <small style={{ color: '#64748b', fontSize: '12px' }}>
+                              Receipt: <b>{appt.receiptId || 'N/A'}</b> • Tap to {isExpanded ? 'hide' : 'view info'} 🔍
+                            </small>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ background: isCompleted ? '#dcfce7' : '#fef08a', color: isCompleted ? '#15803d' : '#854d0e', padding: '4px 12px', borderRadius: '999px', fontSize: '11.5px', fontWeight: '800', border: isCompleted ? '1.5px solid #bbf7d0' : '1.5px solid #fde047' }}>
+                            {isCompleted ? '✓ Accepted' : '⏳ Pending'}
+                          </span>
+
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm('Kya aap is appointment ko delete karna chahte hain?')) {
+                                try {
+                                  const token = localStorage.getItem('token');
+                                  await fetch(`${API_BASE_URL}/api/appointments/${appt._id}`, {
+                                    method: 'DELETE',
+                                    headers: { Authorization: `Bearer ` + token }
+                                  });
+                                  setPatientAppointments(prev => prev.filter(item => item._id !== appt._id));
+                                } catch (err) {
+                                  alert('Delete karne me error aayi.');
+                                }
+                              }
+                            }}
+                            style={{ background: '#ffeeef', border: '1px solid #fecaca', color: '#dc2626', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Delete Appointment"
+                          >
+                            <FaTrashAlt size={12} /> Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {isExpanded && (
+                        <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px dashed #cbd5e1' }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '13px', color: '#334155', marginBottom: '12px' }}>
+                            <div><strong>Doctor Email:</strong> {appt.doctorEmail}</div>
+                            <div><strong>Booked Slot:</strong> {appt.date} at {appt.time}</div>
+                            <div><strong>Status:</strong> <span style={{ color: isCompleted ? '#16a34a' : '#ca8a04', fontWeight: '700' }}>{appt.status}</span></div>
+                          </div>
+
+                          <div style={{ background: '#ffffff', border: '1.5px solid #ccfbf1', padding: '14px', borderRadius: '12px' }}>
+                            <p style={{ margin: '0 0 6px', color: '#0f766e', fontWeight: '800', fontSize: '13.5px' }}>
+                              💊 Doctor's Response & Prescription:
+                            </p>
+                            <p style={{ margin: 0, color: '#1e293b', fontSize: '13.5px', lineHeight: '1.5' }}>
+                              {appt.prescription || 'Doctor ne abhi tak accept karke prescription update nahi kiya hai (Status: Pending).'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 4. DOCTORS MODULE & APPOINTMENT BOOKING */}

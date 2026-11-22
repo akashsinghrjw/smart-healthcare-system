@@ -9,7 +9,9 @@ import {
   FaEdit,
   FaTrash,
   FaReply,
-  FaTimes
+  FaTimes,
+  FaUserMd,
+  FaSave
 } from "react-icons/fa";
 import { safeLoad } from "../utils/storage";
 
@@ -32,6 +34,62 @@ export default function OwnerDashboard({
   const [editingPatient, setEditingPatient] = useState(null);
   const [replyingTicket, setReplyingTicket] = useState(null);
   const [adminReplyText, setAdminReplyText] = useState("");
+
+  // ✅ New Doctor Creation Form State inside OwnerDashboard
+  const [doctorForm, setDoctorForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    qualification: "MBBS, MD",
+    specialization: "General Physician",
+    hospitalName: "Smart Healthcare Hospital",
+    location: "Main City",
+    fees: 500,
+    phone: "",
+    bio: ""
+  });
+  const [doctorMsg, setDoctorMsg] = useState("");
+  const [creatingDoc, setCreatingDoc] = useState(false);
+
+  const handleDoctorChange = (e) => {
+    const { name, value } = e.target;
+    setDoctorForm(prev => ({ ...prev, [name]: value }));
+    setDoctorMsg("");
+  };
+
+  const handleCreateDoctorSubmit = async (e) => {
+    e.preventDefault();
+    setCreatingDoc(true);
+    setDoctorMsg("");
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/doctors/admin/create-doctor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(doctorForm)
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDoctorMsg("Doctor account created successfully!");
+        setDoctorForm({
+          name: "", email: "", password: "", qualification: "MBBS, MD",
+          specialization: "General Physician", hospitalName: "Smart Healthcare Hospital",
+          location: "Main City", fees: 500, phone: "", bio: ""
+        });
+      } else {
+        throw new Error(data.message || "Failed to create doctor.");
+      }
+    } catch (err) {
+      setDoctorMsg("Error: " + err.message);
+    } finally {
+      setCreatingDoc(false);
+    }
+  };
 
   const handleDeleteTriageLog = (logId) => {
     if (window.confirm("Admin: Kya aap is AI Consultation Query ko database se permanently delete karna chahte hain? Yeh user history se bhi hat jayegi.")) {
@@ -89,7 +147,6 @@ export default function OwnerDashboard({
       const allMeds = safeLoad("real_medicines") || [];
       const allTriage = safeLoad("real_triage_logs") || [];
       
-      // Update local storage matches
       localStorage.setItem("real_records", JSON.stringify(allRecords));
       localStorage.setItem("real_medicines", JSON.stringify(allMeds));
       localStorage.setItem("real_triage_logs", JSON.stringify(allTriage));
@@ -134,12 +191,15 @@ export default function OwnerDashboard({
   const selMeds = selectedPatient ? (medicines || []).filter((m) => (m?.patientEmail || m?.email || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
   const selTriage = selectedPatient ? (triageLogs || []).filter((t) => (t?.patientEmail || t?.email || "").toLowerCase() === (selectedPatient?.email || "").toLowerCase()) : [];
 
+  const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", boxSizing: "border-box", fontSize: "13px" };
+  const labelStyle = { display: "block", fontSize: "12px", fontWeight: "600", color: "#334155", marginBottom: "4px" };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
           <h2 style={{ fontSize: "22px", margin: 0 }}>Hospital Admin Live Dashboard</h2>
-          <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>Inspect patient database, review uploaded medical reports/images, delete AI queries, and resolve user tickets.</p>
+          <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>Inspect patient database, register doctors, review uploaded medical reports/images, and resolve user tickets.</p>
         </div>
         <button style={{ background: "#ffffff", color: "#0d9488", border: "1.5px solid #0d9488", padding: "8px 18px", borderRadius: "999px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }} onClick={onNavigateHome}>← Back to Home</button>
       </div>
@@ -233,6 +293,61 @@ export default function OwnerDashboard({
             </div>
           ))
         )}
+      </div>
+
+      {/* 🩺 ADMIN SECTION: REGISTER NEW DOCTOR */}
+      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px", marginBottom: "22px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+          <FaUserMd color="#0d9488" size={20} />
+          <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>Register New Doctor</h3>
+        </div>
+        <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px" }}>Create official login credentials and professional profile for hospital doctors.</p>
+
+        {doctorMsg && (
+          <div style={{ background: doctorMsg.includes("Error") ? "#fee2e2" : "#dcfce7", color: doctorMsg.includes("Error") ? "#b91c1c" : "#15803d", padding: "10px 14px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>
+            {doctorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleCreateDoctorSubmit} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          <div>
+            <label style={labelStyle}>Doctor Full Name</label>
+            <input type="text" name="name" value={doctorForm.name} onChange={handleDoctorChange} placeholder="Dr. Sharma" required style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Email Address (Login ID)</label>
+            <input type="email" name="email" value={doctorForm.email} onChange={handleDoctorChange} placeholder="doctor@hospital.com" required style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Password</label>
+            <input type="password" name="password" value={doctorForm.password} onChange={handleDoctorChange} placeholder="Secure password" required style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Phone Number</label>
+            <input type="tel" name="phone" value={doctorForm.phone} onChange={handleDoctorChange} placeholder="+91 9876543210" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Qualification</label>
+            <input type="text" name="qualification" value={doctorForm.qualification} onChange={handleDoctorChange} placeholder="MBBS, MS" required style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Specialization</label>
+            <input type="text" name="specialization" value={doctorForm.specialization} onChange={handleDoctorChange} placeholder="Cardiologist" required style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Hospital / Clinic Name</label>
+            <input type="text" name="hospitalName" value={doctorForm.hospitalName} onChange={handleDoctorChange} required style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Consultation Fees (₹)</label>
+            <input type="number" name="fees" value={doctorForm.fees} onChange={handleDoctorChange} required style={inputStyle} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <button type="submit" disabled={creatingDoc} style={{ background: "#0d9488", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "700", cursor: creatingDoc ? "wait" : "pointer", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", fontSize: "14px" }}>
+              <FaSave /> {creatingDoc ? "Creating Doctor Account..." : "Create Doctor Account"}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* LIVE SUPPORT QUERIES */}

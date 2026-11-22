@@ -50,6 +50,7 @@ const BookAppointment = () => {
       const bookingPayload = {
         doctorId: selectedDoctor._id,
         doctorName: selectedDoctor.name,
+        doctorEmail: selectedDoctor.email, 
         hospitalName: selectedDoctor.hospitalName,
         qualification: selectedDoctor.qualification,
         appDate,

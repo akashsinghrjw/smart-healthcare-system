@@ -64,7 +64,7 @@ export default function Navbar({
           Home
         </a>
 
-        {/* Agar login nahi hai tabhi baaki options (Patient Portal, Features, About, Contact) dikhenge */}
+        {/* Agar login nahi hai tabhi baaki options dikhenge */}
         {!isLoggedIn && (
           <>
             <button 
@@ -171,13 +171,12 @@ export default function Navbar({
       </nav>
 
       {/* Auth / User Profile Actions */}
-      <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         {isLoggedIn ? (
           <div style={{ display: "flex", alignItems: "center", gap: "14px", background: "#f8fafc", padding: "6px 14px", borderRadius: "999px", border: "1px solid #e2e8f0" }}>
             <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#0f172a" }}>
-              Hi, {userName}
+              Hi, {userName} {userRole === "doctor" && "(Dr.)"}
             </span>
-            {/* Teal Green Logout Button */}
             <button
               onClick={onLogout}
               style={{
@@ -206,10 +205,34 @@ export default function Navbar({
           </div>
         ) : (
           <>
+            {/* ✅ Naya Doctor Portal Button */}
+            <button
+              onClick={() => onOpenAuth("login", "doctor")}
+              style={{
+                padding: "8px 16px",
+                background: "#f1f5f9",
+                color: "#0f172a",
+                border: "1px solid #cbd5e1",
+                borderRadius: "9999px",
+                fontWeight: "700",
+                cursor: "pointer",
+                fontSize: "13px",
+                transition: "all 0.2s ease"
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = "#e2e8f0";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = "#f1f5f9";
+              }}
+            >
+              Doctor Portal
+            </button>
+
             <button
               onClick={() => onOpenAuth("register", "patient")}
               style={{
-                padding: "8px 20px",
+                padding: "8px 18px",
                 background: "#ccfbf1",
                 color: "#0f766e",
                 border: "1px solid #99f6e4",
@@ -221,14 +244,12 @@ export default function Navbar({
               }}
               onMouseOver={(e) => {
                 e.target.style.background = "#99f6e4";
-                e.target.style.transform = "scale(1.05)";
               }}
               onMouseOut={(e) => {
                 e.target.style.background = "#ccfbf1";
-                e.target.style.transform = "scale(1)";
               }}
             >
-              Register
+                Register
             </button>
 
             <button
@@ -246,11 +267,9 @@ export default function Navbar({
               }}
               onMouseOver={(e) => {
                 e.target.style.background = "#0f766e";
-                e.target.style.transform = "scale(1.05)";
               }}
               onMouseOut={(e) => {
                 e.target.style.background = "#0d9488";
-                e.target.style.transform = "scale(1)";
               }}
             >
               Login

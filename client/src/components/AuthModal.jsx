@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { api } from "../utils/api";
 import { FaTimes } from "react-icons/fa";
@@ -12,6 +11,7 @@ export default function AuthModal({
   onLoginSuccess,
 }) {
   const isAdminModal = authRole === "admin";
+  const isDoctorModal = authRole === "doctor";
 
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -24,9 +24,9 @@ export default function AuthModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setIsLogin(isAdminModal || authMode === "login");
+    setIsLogin(isAdminModal || isDoctorModal || authMode === "login");
     setError("");
-  }, [authMode, isAdminModal, showAuthModal]);
+  }, [authMode, isAdminModal, isDoctorModal, showAuthModal]);
 
   if (!showAuthModal) return null;
 
@@ -60,6 +60,7 @@ export default function AuthModal({
       if (isLogin) {
         response = await api.login({ email, password });
       } else {
+        // 🔒 SECURITY: Public registration is strictly restricted to 'patient' role
         response = await api.register({
           name: formData.name.trim(),
           email,
@@ -76,18 +77,22 @@ export default function AuthModal({
       const role = String(response.role || "patient").toLowerCase();
 
       if (isAdminModal && role !== "admin") {
-        throw new Error(
-          "This account is not an administrator account."
-        );
+        throw new Error("This account is not an administrator account.");
       }
 
-      if (!isAdminModal && role === "admin") {
-        throw new Error(
-          "Please use the Hospital Admin Portal for this account."
-        );
+      if (isDoctorModal && role !== "doctor") {
+        throw new Error("This account is not registered as a doctor. Please contact Hospital Admin.");
       }
 
-      const name = response.name || formData.name.trim() || "Patient";
+      if (!isAdminModal && !isDoctorModal && role === "admin") {
+        throw new Error("Please use the Hospital Admin Portal for this account.");
+      }
+
+      if (!isAdminModal && !isDoctorModal && role === "doctor") {
+        throw new Error("Please use the Doctor Portal login for this account.");
+      }
+
+      const name = response.name || formData.name.trim() || "User";
       const userEmail = response.email || email;
       const phone = response.phone || formData.phone.trim() || "";
 
@@ -169,13 +174,17 @@ export default function AuthModal({
             <h2 style={{ margin: 0, color: "#0f172a", fontSize: "20px" }}>
               {isAdminModal
                 ? "Admin Console Login"
+                : isDoctorModal
+                ? "Doctor Portal Sign In"
                 : isLogin
-                  ? "Welcome Back"
-                  : "Create Patient Account"}
+                ? "Welcome Back"
+                : "Create Patient Account"}
             </h2>
             <small style={{ color: "#0d9488", fontWeight: 700 }}>
               {isAdminModal
                 ? "Hospital Admin Portal"
+                : isDoctorModal
+                ? "Doctor Workspace Portal"
                 : "Smart Healthcare Portal"}
             </small>
           </div>
@@ -214,7 +223,7 @@ export default function AuthModal({
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: "14px" }}
         >
-          {!isLogin && !isAdminModal && (
+          {!isLogin && !isAdminModal && !isDoctorModal && (
             <>
               <div>
                 <label htmlFor="auth-name" style={labelStyle}>
@@ -246,6 +255,12 @@ export default function AuthModal({
                 />
               </div>
             </>
+          )}
+
+          {isDoctorModal && !isLogin && (
+            <div style={{ background: "#fef3c7", color: "#92400e", padding: "10px", borderRadius: "8px", fontSize: "12px", marginBottom: "4px" }}>
+              ⚠️ Doctor accounts can only be created by Hospital Admin. Please login with credentials provided by your hospital administrator.
+            </div>
           )}
 
           <div>
@@ -296,14 +311,16 @@ export default function AuthModal({
             {loading
               ? "Authenticating..."
               : isAdminModal
-                ? "Secure Admin Sign In"
-                : isLogin
-                  ? "Sign In"
-                  : "Register Account"}
+              ? "Secure Admin Sign In"
+              : isDoctorModal
+              ? "Doctor Sign In"
+              : isLogin
+              ? "Sign In"
+              : "Register Patient Account"}
           </button>
         </form>
 
-        {!isAdminModal && (
+        {!isAdminModal && !isDoctorModal && (
           <div style={{ textAlign: "center", marginTop: "16px", fontSize: "13px" }}>
             {isLogin ? "Don't have an account? " : "Already registered? "}
             <button

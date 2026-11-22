@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import DoctorDashboard from "./pages/DoctorDashboard"; // ✅ Added Doctor Dashboard
 import { safeLoad } from "./utils/storage";
 import { api } from "./utils/api";
 
@@ -145,7 +146,6 @@ export default function App() {
         setRegisteredUsers(loadedPatients);
       }
 
-      // Helper to find patient name/email by user ID if MongoDB record only stores user ObjectId
       const resolvePatientInfo = (item) => {
         const directEmail =
           item.patientEmail || item.email || item.user?.email || "";
@@ -182,7 +182,6 @@ export default function App() {
 
       const [recordsResult, medicinesResult, triageResult] = results;
 
-      // Merge Medical Records
       if (recordsResult.status === "fulfilled") {
         const data = recordsResult.value;
         const list = Array.isArray(data)
@@ -213,7 +212,6 @@ export default function App() {
         setRecords(localRecords);
       }
 
-      // Merge Medications
       if (medicinesResult.status === "fulfilled") {
         const data = medicinesResult.value;
         const list = Array.isArray(data)
@@ -248,7 +246,6 @@ export default function App() {
         setMedicines(localMeds);
       }
 
-      // Merge AI Triage Logs
       if (triageResult.status === "fulfilled") {
         const data = triageResult.value;
         const list = Array.isArray(data)
@@ -284,13 +281,12 @@ export default function App() {
         setTriageLogs(localTriage);
       }
 
-      // Set Support Tickets
       setSupportTickets(localTickets);
     },
     [getMergedLocalData]
   );
 
-  // Restore an existing session after page refresh.
+  // Restore session on refresh
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = (
@@ -328,7 +324,6 @@ export default function App() {
     }
   };
 
-  // Called after successful login.
   const handleLoginSuccess = async (role, name, email, phone) => {
     const actualRole = String(role || "patient").toLowerCase();
 
@@ -466,6 +461,12 @@ export default function App() {
                 setViewingFileRecord={setViewingFileRecord}
                 onNavigateHome={() => handleTabChange("home")}
               />
+            ) : userRole === "doctor" ? (
+              <DoctorDashboard
+                userName={userName}
+                userEmail={userEmail}
+                onNavigateHome={() => handleTabChange("home")}
+              />
             ) : (
               <Dashboard
                 userName={userName}
@@ -481,7 +482,7 @@ export default function App() {
         )}
       </div>
 
-      {/* Global File Preview Modal for Admin Dossier / Records */}
+      {/* Global File Preview Modal */}
       {viewingFileRecord && (
         <div
           onClick={() => setViewingFileRecord(null)}
@@ -523,7 +524,7 @@ export default function App() {
                   {viewingFileRecord.title}
                 </h3>
                 <small style={{ color: "#64748b" }}>
-                  {viewingFileRecord.type} - {viewingFileRecord.date || "Recorded"}
+                  {viewingFileRecord.type} | {viewingFileRecord.date || "Recorded"}
                 </small>
               </div>
               <button
@@ -561,37 +562,6 @@ export default function App() {
                       objectFit: "contain",
                     }}
                   />
-                ) : viewingFileRecord.fileData.startsWith("data:application/pdf") || 
-                    (viewingFileRecord.fileName && viewingFileRecord.fileName.toLowerCase().endsWith(".pdf")) ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
-                    <iframe
-                      src={viewingFileRecord.fileData}
-                      title={viewingFileRecord.title || "PDF Viewer"}
-                      style={{
-                        width: "100%",
-                        height: "450px",
-                        border: "1px solid #cbd5e1",
-                        borderRadius: "8px",
-                        background: "#fff",
-                      }}
-                    />
-                    <a
-                      href={viewingFileRecord.fileData}
-                      download={viewingFileRecord.fileName || "document.pdf"}
-                      style={{
-                        display: "inline-block",
-                        background: "#0d9488",
-                        color: "#fff",
-                        padding: "8px 18px",
-                        borderRadius: "6px",
-                        textDecoration: "none",
-                        fontSize: "13px",
-                        fontWeight: "700",
-                      }}
-                    >
-                      📥 Download PDF File
-                    </a>
-                  </div>
                 ) : (
                   <div>
                     <h4 style={{ margin: "0 0 8px" }}>

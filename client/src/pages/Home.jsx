@@ -128,6 +128,18 @@ export default function Home({
               Access Healthcare Portal <FaArrowRight />
             </button>
 
+            {/* ✅ Doctor Portal Login Button */}
+            <button
+              onClick={() => {
+                setAuthMode("login");
+                setAuthRole("doctor");
+                setShowAuthModal(true);
+              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f0fdfa", color: "#0f766e", border: "1.5px solid #0d9488", padding: "14px 24px", borderRadius: "10px", fontWeight: "700", fontSize: "15px", cursor: "pointer" }}
+            >
+              <FaUserMd /> Doctor Portal
+            </button>
+
             <button
               onClick={() => {
                 setAuthMode("login");
@@ -150,6 +162,7 @@ export default function Home({
             <span style={{ background: "#dcfce7", color: "#16a34a", fontSize: "11px", fontWeight: "700", padding: "3px 10px", borderRadius: "999px" }}>
               ● 24/7 Active
             </span>
+
           </div>
 
           <div style={{ background: "linear-gradient(135deg, #0d9488 0%, #0e7490 100%)", borderRadius: "14px", padding: "20px", color: "#ffffff", marginBottom: "16px" }}>
@@ -175,6 +188,10 @@ export default function Home({
 
           <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 14px", borderRadius: "10px", marginTop: "12px", fontSize: "13px" }}>
             <b>Patient Portal Access:</b> AI symptom triage, health vault, and medicine schedule.
+          </div>
+
+          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 14px", borderRadius: "10px", marginTop: "10px", fontSize: "13px" }}>
+            <b>Doctor Portal Access:</b> Professional profile, photo upload, qualifications & fees management.
           </div>
           
           <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 14px", borderRadius: "10px", marginTop: "10px", fontSize: "13px" }}>
